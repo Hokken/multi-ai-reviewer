@@ -64,7 +64,7 @@ describe("audit persistence", () => {
       expect(markdown).toContain("```diff");
       expect(markdown).toContain("## Author Follow-Up");
       expect(markdown).toContain(
-        "update the `FIXES APPLIED` section and keep the `Prior Reports` section current in the original review instructions file",
+        "update the `FIXES APPLIED` section and keep the `PRIOR REPORTS` section current in the original review instructions file",
       );
     } finally {
       await rm(cwd, { recursive: true, force: true });
@@ -165,7 +165,7 @@ describe("audit persistence", () => {
       expect(markdown).toContain("File:** docs/investigations/feature-x.md");
       expect(markdown).toContain("Mode:** investigation");
       expect(markdown).toContain(
-        "update the `FIXES APPLIED` section and keep the `Prior Reports` section current in the original investigation file",
+        "update the `FIXES APPLIED` section and keep the `PRIOR REPORTS` section current in the original investigation file",
       );
     } finally {
       await rm(cwd, { recursive: true, force: true });

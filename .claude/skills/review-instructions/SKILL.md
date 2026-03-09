@@ -178,16 +178,16 @@ Include:
 - important supporting code or data files even if unchanged
 - schema, migration, infrastructure, or config files needed to understand runtime behavior
 
-### Prior Reports
+### PRIOR REPORTS
 
-If this is a validation pass, always include a `Prior Reports` section before `FIXES APPLIED`.
+If this is a validation pass, always include a `PRIOR REPORTS` section before `FIXES APPLIED`.
 
 List every prior generated Multi AI Reviewer report that should remain in reviewer context, using repo-relative paths under `.mrev/reports/`.
 
 Example:
 
 ```md
-## Prior Reports
+## PRIOR REPORTS
 
 - .mrev/reports/2026-03-08-first-pass.md
 - .mrev/reports/2026-03-09-second-pass.md
@@ -195,13 +195,13 @@ Example:
 
 Preserve existing entries and append new ones as later passes occur. Do not remove older reports unless they are clearly unrelated.
 
-If the artifact already contains a `Prior Reports` section:
+If the artifact already contains a `PRIOR REPORTS` section:
 
 - preserve it
 - keep existing report paths
 - append any new prior-pass report paths that are now relevant
 
-If this is not the first pass and the artifact does not yet contain `Prior Reports`, create the section automatically.
+If this is not the first pass and the artifact does not yet contain `PRIOR REPORTS`, create the section automatically.
 
 Treat this as required on later passes, not optional. Reviewers depend on these paths to retain context from their previous reports.
 
@@ -249,9 +249,9 @@ If a suggestion was declined, record it here with:
 - `Status: not fixed`
 - a short rationale for why it was not applied
 
-If this is not the first pass and there are prior Multi AI Reviewer reports, make sure the `Prior Reports` section and the `FIXES APPLIED` entries agree with each other.
+If this is not the first pass and there are prior Multi AI Reviewer reports, make sure the `PRIOR REPORTS` section and the `FIXES APPLIED` entries agree with each other.
 
-When updating an existing artifact after a review pass, always preserve or append the `Prior Reports` section before updating `FIXES APPLIED`.
+When updating an existing artifact after a review pass, always preserve or append the `PRIOR REPORTS` section before updating `FIXES APPLIED`.
 
 ## Writing Guidelines
 

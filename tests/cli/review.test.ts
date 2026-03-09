@@ -654,7 +654,7 @@ describe("review workflows", () => {
           "## FIXES APPLIED",
           "#### Fix 1: Applied",
           "",
-          "## Prior Reports",
+          "## PRIOR REPORTS",
           "- .mrev/reports/pass-1.md",
           "- .mrev/reports/pass-2.md",
           "- .mrev/reports/pass-3.md",
