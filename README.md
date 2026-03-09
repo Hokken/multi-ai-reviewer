@@ -12,7 +12,17 @@ mrev is not an editor. It runs the reviews, collects the results, and writes the
 
 ## Quick Start
 
-Run `mrev` from the repo you want to review.
+Install and build the CLI first:
+
+```powershell
+npm install
+npm run build
+npm link
+```
+
+Then run `mrev` from the repo you want to review.
+
+If you are developing inside this repository, you can also invoke the built CLI directly with `node .\dist\src\cli\index.js`.
 
 **Interactive mode** (picks workflow, reviewers, and files for you):
 
