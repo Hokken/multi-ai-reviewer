@@ -56,7 +56,7 @@ mrev review docs/reviews/feature-review.md
 4. `mrev review` the plan
 5. Implement from the validated plan
 6. `mrev review` the implementation
-7. Fix issues, update `FIXES APPLIED` in the artifact, add prior report paths under `Prior Reports`, and rerun until clean
+7. Fix issues — the author LLM updates `FIXES APPLIED` and `Prior Reports` in the artifact — then rerun until clean
 
 First-pass reviews are broad. Later passes focus on validating the fixes you claimed in `FIXES APPLIED` against what the prior reports actually found.
 
@@ -70,7 +70,7 @@ That skill is the glue between authoring work and `mrev review`:
 
 1. Use the skill to produce an investigation, plan, or implementation review artifact in the repo's configured docs folder.
 2. Run `mrev review <artifact>` or `mrev review` to send that artifact to the reviewer models.
-3. Apply fixes, update `FIXES APPLIED` and `Prior Reports`, then rerun `mrev review` for validation passes.
+3. Apply fixes — the author LLM updates `FIXES APPLIED` and `Prior Reports` — then rerun `mrev review` for validation passes.
 
 ## Common Commands
 
@@ -104,7 +104,7 @@ Each review run saves two files:
 
 The Markdown report is the one you read. The JSON is for tooling and audit.
 
-To chain validation passes, add the previous report path to your artifact under `Prior Reports`. mrev will include it in reviewer context on the next run.
+To chain validation passes, the author LLM adds the previous report path to the artifact under `Prior Reports`. mrev includes it in reviewer context on the next run.
 
 ## Install
 
