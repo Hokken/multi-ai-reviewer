@@ -1,0 +1,11 @@
+node_modules/
+dist/
+docs/
+coverage/
+.mrev/
+tmp/
+.env
+.env.local
+.env.*.local
+*.tgz
+!.env.template
