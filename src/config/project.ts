@@ -1,6 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 import { DEFAULT_AGENT_MODELS } from "./agents.js";
 import {
@@ -43,6 +42,16 @@ const reviewLauncherSchema = z.object({
   }).optional(),
 });
 
+const reviewDefaultsSchema = z.object({
+  mode: z.enum(["investigation", "plan", "implementation"]).optional(),
+  instructions: z.string().optional(),
+  repo_summary: z.string().optional(),
+  tech_stack: z.array(z.string()).optional(),
+  files: z.array(z.string()).optional(),
+  verbose: z.boolean().optional(),
+  gemini_strict: z.boolean().optional(),
+});
+
 const projectConfigSchema = z.object({
   default_pipeline: z.string().optional(),
   presets: z.record(z.string(), presetSchema).default({}),
@@ -62,6 +71,7 @@ const projectConfigSchema = z.object({
       summarise: z.string().optional(),
     })
     .default({}),
+  review_defaults: reviewDefaultsSchema.optional(),
   review_launcher: reviewLauncherSchema.optional(),
 });
 
@@ -78,6 +88,7 @@ export async function loadProjectConfig(cwd: string): Promise<ProjectConfig> {
       presets: config.presets,
       agent_models: config.agent_models,
       prompts: config.prompts,
+      review_defaults: config.review_defaults,
       review_launcher: config.review_launcher,
     };
   } catch (error) {
@@ -86,6 +97,7 @@ export async function loadProjectConfig(cwd: string): Promise<ProjectConfig> {
         presets: {},
         agent_models: {},
         prompts: {},
+        review_defaults: undefined,
         review_launcher: undefined,
       };
     }
@@ -108,6 +120,7 @@ export async function saveProjectConfig(cwd: string, config: ProjectConfig): Pro
     presets: config.presets,
     agent_models: config.agent_models,
     prompts: config.prompts,
+    review_defaults: config.review_defaults,
     review_launcher: config.review_launcher,
   });
 
@@ -121,7 +134,7 @@ export function getProjectConfigPath(cwd: string): string {
     return override;
   }
 
-  return resolveRepoConfigPath(getConductorRoot());
+  return resolveRepoConfigPath(cwd);
 }
 
 function getProjectConfigWritePath(cwd: string): string {
@@ -130,8 +143,10 @@ function getProjectConfigWritePath(cwd: string): string {
     return override;
   }
 
-  return getPreferredRepoConfigPath(getConductorRoot());
+  return getPreferredRepoConfigPath(cwd);
 }
+
+export { loadProjectConfig as loadRepoProjectConfig };
 
 export async function loadRepoReviewLauncherConfig(cwd: string): Promise<ReviewLauncherConfig> {
   const configPath = getRepoLocalConfigPath(cwd);
@@ -244,6 +259,3 @@ function normalizeModelName(value?: string | undefined): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function getConductorRoot(): string {
-  return resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-}

@@ -56,6 +56,9 @@ export async function runCommand(
       });
     });
 
+    child.stdin.on("error", () => {
+      // Ignore EPIPE errors when the child exits before stdin is fully written.
+    });
     if (options.stdin) {
       child.stdin.write(options.stdin);
     }

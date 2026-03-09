@@ -4,7 +4,8 @@ import { constants as fsConstants } from "node:fs";
 import { basename, relative, resolve } from "node:path";
 
 import type { AgentId } from "../../types/index.js";
-import { getReportPathPattern, getReportPathScanner } from "../../config/storage.js";
+import { loadRepoProjectConfig } from "../../config/project.js";
+import { ensureWorkspace, getReportPathPattern, getReportPathScanner } from "../../config/storage.js";
 
 const ALL_AGENTS: AgentId[] = ["claude", "codex", "gemini"];
 const REPO_INSTRUCTION_FILES = ["CLAUDE.md", "AGENTS.md", "GEMINI.md"] as const;
@@ -85,21 +86,30 @@ export async function runAutoReviewCommand(
   reviewFile: string,
   options: AutoReviewWorkflowOptions,
 ): Promise<number> {
-  const analysis = await analyzeReviewFile(reviewFile, options.mode, process.cwd());
+  const cwd = process.cwd();
+  await ensureWorkspace(cwd);
+  const absoluteReviewFile = resolve(cwd, reviewFile);
+  try {
+    await access(absoluteReviewFile, fsConstants.F_OK);
+  } catch {
+    throw new Error(`Review file not found: ${reviewFile}`);
+  }
+  const mergedOptions = await mergeConfigDefaults(cwd, options);
+  const analysis = await analyzeReviewFile(reviewFile, mergedOptions.mode, cwd);
 
   const suffix = analysis.validationPass ? " (validation pass detected)" : "";
   process.stdout.write(`Detected review mode: ${analysis.mode}${suffix}\n`);
   process.stdout.write(`${formatReviewArtifactLine(reviewFile)}\n`);
 
   if (analysis.mode === "plan") {
-    return runPlanReviewCommand(reviewFile, options);
+    return runPlanReviewCommand(reviewFile, mergedOptions);
   }
 
   if (analysis.mode === "investigation") {
-    return runInvestigationReviewCommand(reviewFile, options);
+    return runInvestigationReviewCommand(reviewFile, mergedOptions);
   }
 
-  return runImplementationReviewCommand(reviewFile, options);
+  return runImplementationReviewCommand(reviewFile, mergedOptions);
 }
 
 export function formatReviewArtifactLine(reviewFile: string): string {
@@ -431,10 +441,10 @@ export function coerceReviewWorkflowOptions(input: {
   return {
     reviewers: input.reviewers?.map(parseAgentId),
     reviewerModels: parseReviewerModelEntries(input.reviewerModels),
-    instructions: normalizeInstructions(input.instructions),
-    claudeModel: normalizeInstructions(input.claudeModel),
-    codexModel: normalizeInstructions(input.codexModel),
-    geminiModel: normalizeInstructions(input.geminiModel),
+    instructions: trimOrUndefined(input.instructions),
+    claudeModel: trimOrUndefined(input.claudeModel),
+    codexModel: trimOrUndefined(input.codexModel),
+    geminiModel: trimOrUndefined(input.geminiModel),
     repoSummary: input.repoSummary,
     techStack: input.techStack,
     verbose: input.verbose,
@@ -462,11 +472,11 @@ export function coerceAutoReviewWorkflowOptions(input: {
   return {
     reviewers: input.reviewers?.map(parseAgentId),
     reviewerModels: parseReviewerModelEntries(input.reviewerModels),
-    instructions: normalizeInstructions(input.instructions),
+    instructions: trimOrUndefined(input.instructions),
     mode: input.mode ? parseReviewWorkflowMode(input.mode) : undefined,
-    claudeModel: normalizeInstructions(input.claudeModel),
-    codexModel: normalizeInstructions(input.codexModel),
-    geminiModel: normalizeInstructions(input.geminiModel),
+    claudeModel: trimOrUndefined(input.claudeModel),
+    codexModel: trimOrUndefined(input.codexModel),
+    geminiModel: trimOrUndefined(input.geminiModel),
     repoSummary: input.repoSummary,
     techStack: input.techStack,
     verbose: input.verbose,
@@ -668,7 +678,7 @@ function parseReviewerModelEntries(
       );
     }
 
-    parsed[parseAgentId(match[1])] = normalizeInstructions(match[2]);
+    parsed[parseAgentId(match[1])] = trimOrUndefined(match[2]);
   }
 
   return parsed;
@@ -689,7 +699,7 @@ function appendInstructions(
   parts: string[],
   instructions?: string | undefined,
 ): string {
-  const normalized = normalizeInstructions(instructions);
+  const normalized = trimOrUndefined(instructions);
   if (!normalized) {
     return parts.join(" ");
   }
@@ -697,7 +707,7 @@ function appendInstructions(
   return [...parts, `Additional review instructions: ${normalized}`].join(" ");
 }
 
-function normalizeInstructions(value?: string | undefined): string | undefined {
+function trimOrUndefined(value?: string | undefined): string | undefined {
   if (!value) {
     return undefined;
   }
@@ -756,15 +766,78 @@ async function readReviewFile(reviewFile: string, cwd: string): Promise<string> 
   return readFile(absolutePath, "utf8");
 }
 
-function isReferencedReviewReportPath(filePath: string): boolean {
-  return getReportPathPattern().test(filePath);
-}
-
 function countSignals(normalized: string, signals: readonly string[]): number {
   return signals.reduce(
     (count, signal) => count + (normalized.includes(signal) ? 1 : 0),
     0,
   );
+}
+
+async function mergeConfigDefaults<T extends ReviewWorkflowOptions>(
+  cwd: string,
+  options: T,
+): Promise<T> {
+  const config = await loadRepoProjectConfig(cwd);
+  const configModels = config.agent_models;
+  const defaults = config.review_defaults;
+
+  const merged: T = { ...options };
+
+  // Review defaults — CLI flags always win over config values.
+  if (defaults) {
+    if (!merged.instructions && defaults.instructions) {
+      merged.instructions = defaults.instructions;
+    }
+    if (!merged.repoSummary && defaults.repo_summary) {
+      merged.repoSummary = defaults.repo_summary;
+    }
+    if ((!merged.techStack || merged.techStack.length === 0) && defaults.tech_stack) {
+      merged.techStack = defaults.tech_stack;
+    }
+    if ((!merged.extraFiles || merged.extraFiles.length === 0) && defaults.files) {
+      merged.extraFiles = defaults.files;
+    }
+    if (merged.verbose === undefined && defaults.verbose !== undefined) {
+      merged.verbose = defaults.verbose;
+    }
+    if (merged.geminiStrict === undefined && defaults.gemini_strict !== undefined) {
+      merged.geminiStrict = defaults.gemini_strict;
+    }
+    if ("mode" in merged && !(merged as AutoReviewWorkflowOptions).mode && defaults.mode) {
+      (merged as AutoReviewWorkflowOptions).mode = defaults.mode;
+    }
+  }
+
+  // Agent models — CLI flags always win over config values.
+  const hasCliModels =
+    Boolean(options.claudeModel) ||
+    Boolean(options.codexModel) ||
+    Boolean(options.geminiModel) ||
+    Boolean(options.reviewerModels);
+
+  if (!hasCliModels) {
+    const hasConfigModels =
+      Boolean(configModels.claude) ||
+      Boolean(configModels.codex) ||
+      Boolean(configModels.gemini);
+
+    if (hasConfigModels) {
+      const configReviewerModels: Partial<Record<AgentId, string | undefined>> = {};
+      if (configModels.claude) configReviewerModels.claude = configModels.claude;
+      if (configModels.codex) configReviewerModels.codex = configModels.codex;
+      if (configModels.gemini) configReviewerModels.gemini = configModels.gemini;
+
+      const configReviewers = (Object.keys(configReviewerModels) as AgentId[])
+        .filter((agent) => Boolean(configReviewerModels[agent]));
+
+      if (!merged.reviewers || merged.reviewers.length === 0) {
+        merged.reviewers = configReviewers;
+      }
+      merged.reviewerModels = configReviewerModels;
+    }
+  }
+
+  return merged;
 }
 
 function resolveReviewerModelOverrides(

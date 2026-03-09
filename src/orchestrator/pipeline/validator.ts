@@ -53,32 +53,30 @@ export function validatePipeline(pipeline: ParsedPipeline): ValidationResult {
     }
   }
 
-  const sequentialSteps = steps;
-  for (let index = 1; index < sequentialSteps.length; index += 1) {
-    const current = sequentialSteps[index];
-    const previous = sequentialSteps[index - 1];
+  for (let groupIndex = 1; groupIndex < pipeline.groups.length; groupIndex += 1) {
+    const previousGroup = pipeline.groups[groupIndex - 1];
+    const currentGroup = pipeline.groups[groupIndex];
+    if (!previousGroup || !currentGroup) continue;
 
-    if (!current || !previous) {
-      continue;
-    }
-
-    if (
-      current.role === "review" &&
-      previous.role === "review" &&
-      current.agent === previous.agent
-    ) {
-      warnings.push({
-        code: "same_agent_sequential_review",
-        message:
-          `Warning: ${current.agent} is assigned to sequential review steps. ` +
-          "This is valid, but often has limited value.",
-      });
+    for (const current of currentGroup.steps) {
+      if (current.role !== "review") continue;
+      const duplicate = previousGroup.steps.find(
+        (prev) => prev.role === "review" && prev.agent === current.agent,
+      );
+      if (duplicate) {
+        warnings.push({
+          code: "same_agent_sequential_review",
+          message:
+            `Warning: ${current.agent} is assigned to review steps in consecutive groups. ` +
+            "This is valid, but often has limited value.",
+        });
+      }
     }
   }
 
-  const firstExecuteIndex = sequentialSteps.findIndex((step) => step.role === "execute");
+  const firstExecuteIndex = steps.findIndex((step) => step.role === "execute");
   if (firstExecuteIndex !== -1) {
-    const architectBeforeExecute = sequentialSteps
+    const architectBeforeExecute = steps
       .slice(0, firstExecuteIndex)
       .some((step) => step.role === "architect");
 

@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export const APP_STORAGE_DIR = ".mrev";
@@ -83,6 +84,61 @@ export function getConfigEnvOverride(): string | undefined {
   }
 
   return undefined;
+}
+
+const BASE_CONFIG_YAML = `# Multi AI Reviewer configuration
+# See AGENTS.md for full documentation.
+
+# Set agent_models to skip --reviewer-models on every command.
+# Only declare the reviewers you want to use (1, 2, or all 3).
+# agent_models:
+#   claude: claude-sonnet-4-6
+#   codex: gpt-5.2-codex
+#   gemini: gemini-3-flash-preview
+
+# Default values for review command flags.
+# CLI flags always override these values.
+# review_defaults:
+#   mode: implementation
+#   instructions: "Focus on security and performance"
+#   repo_summary: "A TypeScript monorepo for..."
+#   tech_stack:
+#     - typescript
+#     - node
+#   files:
+#     - src/core/schema.ts
+#   verbose: false
+#   gemini_strict: false
+
+review_launcher:
+  investigations_folder: docs/investigations
+  plans_folder: docs/plans
+  reviews_folder: docs/reviews
+  profiles:
+    investigation:
+      mode: investigation
+    plan:
+      mode: plan
+    review:
+      mode: implementation
+`;
+
+export async function ensureWorkspace(cwd: string): Promise<void> {
+  const storageDir = getPreferredStorageDir(cwd);
+  const reportsDir = join(storageDir, REPORTS_DIRNAME);
+  const sessionsDir = join(storageDir, SESSIONS_DIRNAME);
+  const configPath = join(storageDir, CONFIG_FILENAME);
+
+  await mkdir(reportsDir, { recursive: true });
+  await mkdir(sessionsDir, { recursive: true });
+
+  try {
+    await writeFile(configPath, BASE_CONFIG_YAML, { flag: "wx" });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
+      throw error;
+    }
+  }
 }
 
 export function getReportPathPattern(): RegExp {

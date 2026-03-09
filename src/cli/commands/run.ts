@@ -43,7 +43,8 @@ export interface RunCommandOptions {
 }
 
 export async function runRunCommand(options: RunCommandOptions): Promise<number> {
-  const projectConfig = await loadProjectConfig(process.cwd());
+  const cwd = process.cwd();
+  const projectConfig = await loadProjectConfig(cwd);
   const task = await resolveTask(options);
   if (!task) {
     process.stderr.write("A task is required. Use --task or --task-file.\n");
@@ -82,7 +83,7 @@ export async function runRunCommand(options: RunCommandOptions): Promise<number>
   }
 
   if (!options.dryRun) {
-    return runActualPipeline(task, pipeline, options);
+    return runActualPipeline(task, pipeline, options, projectConfig);
   }
 
   const priorOutputs: PriorStepOutput[] = [];
@@ -113,7 +114,6 @@ export async function runRunCommand(options: RunCommandOptions): Promise<number>
     }
 
     for (const step of group.steps) {
-      stepIndex += 0;
       priorOutputs.push({
         stepIndex: priorOutputs.length + 1,
         role: step.role,
@@ -132,8 +132,8 @@ async function runActualPipeline(
   task: string,
   pipeline: ParsedPipeline,
   options: RunCommandOptions,
+  projectConfig: Awaited<ReturnType<typeof loadProjectConfig>>,
 ): Promise<number> {
-  const projectConfig = await loadProjectConfig(process.cwd());
   const agentModels = resolveAgentModels(projectConfig, {
     claude: options.claudeModel,
     codex: options.codexModel,

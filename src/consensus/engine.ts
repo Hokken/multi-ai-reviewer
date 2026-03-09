@@ -27,10 +27,14 @@ export function buildConsensusReport(steps: ExecutionStepResult[]): ConsensusRep
       : "proceed";
 
   const aligned = reviews.every((review) => review.verdict === reviews[0]?.verdict);
-  const parseFailures = steps.filter((step) => step.status === "parse_failed").length;
-  const failures = steps.filter((step) => step.status === "failed").length;
+  const reviewStepResults = steps.filter((step) => step.role === "review");
+  const parseFailures = reviewStepResults.filter((step) => step.status === "parse_failed").length;
+  const failures = reviewStepResults.filter((step) => step.status === "failed").length;
   const confidencePenalty = parseFailures * 0.1 + failures * 0.15;
-  const confidence = Math.max(0, Math.min(1, (reviews.filter((r) => r.verdict === "approve").length / reviews.length) - confidencePenalty + (aligned ? 0.15 : 0)));
+  const signalRatio = reviewStepResults.length > 0
+    ? reviewSteps.length / reviewStepResults.length
+    : 0;
+  const confidence = Math.max(0, Math.min(1, signalRatio - confidencePenalty + (aligned ? 0.15 : 0)));
 
   const summary = buildSummary(reviews, blockers, recommendation, aligned);
 

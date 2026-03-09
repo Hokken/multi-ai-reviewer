@@ -180,6 +180,10 @@ export async function executePipeline(
     }
 
     for (const result of groupResults) {
+      if (result.status === "failed") {
+        continue;
+      }
+
       priorOutputs.push({
         stepIndex: result.stepIndex,
         role: result.role,
@@ -187,7 +191,7 @@ export async function executePipeline(
         content:
           result.parsedOutput !== null
             ? JSON.stringify(result.parsedOutput, null, 2)
-            : result.normalizedOutput || result.stderr || result.error || "",
+            : result.normalizedOutput || "",
       });
 
       if (

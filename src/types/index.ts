@@ -220,10 +220,21 @@ export interface ReviewLauncherConfig {
   last_used?: ReviewLauncherLastUsedConfig | undefined;
 }
 
+export interface ReviewDefaultsConfig {
+  mode?: "investigation" | "plan" | "implementation" | undefined;
+  instructions?: string | undefined;
+  repo_summary?: string | undefined;
+  tech_stack?: string[] | undefined;
+  files?: string[] | undefined;
+  verbose?: boolean | undefined;
+  gemini_strict?: boolean | undefined;
+}
+
 export interface ProjectConfig {
   default_pipeline?: string | undefined;
   presets: Record<string, PresetConfig>;
   agent_models: AgentModelConfig;
   prompts: Partial<Record<RoleId, string | undefined>>;
+  review_defaults?: ReviewDefaultsConfig | undefined;
   review_launcher?: ReviewLauncherConfig | undefined;
 }

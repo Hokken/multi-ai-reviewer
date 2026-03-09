@@ -27,7 +27,7 @@ import type {
   ReviewLauncherLastUsedConfig,
   ReviewLauncherProfileConfig,
 } from "../types/index.js";
-import { getReportPathPattern } from "../config/storage.js";
+import { ensureWorkspace, getReportPathPattern } from "../config/storage.js";
 
 const ALL_AGENTS: AgentId[] = ["claude", "codex", "gemini"];
 const SUPPORTED_REVIEW_FILE_EXTENSIONS = new Set([".md", ".mdx", ".markdown", ".txt"]);
@@ -108,6 +108,7 @@ export async function runInteractiveReviewLauncher(
   ensureInteractiveTerminal();
 
   const cwd = process.cwd();
+  await ensureWorkspace(cwd);
   const launcherConfig = await loadRepoReviewLauncherConfig(cwd);
   const configPath = getRepoLocalConfigPath(cwd);
   const profiles = resolveReviewLauncherProfiles(launcherConfig);
@@ -351,6 +352,12 @@ export async function runInteractiveReviewLauncher(
 
       currentStep = "file";
     }
+  } catch (error) {
+    if (error instanceof Error && error.message === "Interactive review launcher cancelled.") {
+      promptSession.exitMenuScreen();
+      return lastExitCode;
+    }
+    throw error;
   } finally {
     promptSession.exitMenuScreen();
   }

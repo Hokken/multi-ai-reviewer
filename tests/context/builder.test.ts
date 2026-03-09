@@ -1,6 +1,6 @@
 import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -27,9 +27,10 @@ describe("buildContext", () => {
       });
 
       expect(context.sources).toContain("--files");
-      expect(context.summary).toContain("FILE: src\\service.ts");
+      const expectedPath = normalize("src/service.ts");
+      expect(context.summary).toContain(`FILE: ${expectedPath}`);
       expect(context.summary).toContain("export class AlphaService");
-      expect(context.includedFiles[0]?.path).toBe("src\\service.ts");
+      expect(context.includedFiles[0]?.path).toBe(expectedPath);
     } finally {
       await rm(repoPath, { recursive: true, force: true });
     }

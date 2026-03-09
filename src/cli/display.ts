@@ -99,7 +99,7 @@ export function createProgressReporter(input?: {
       return;
     }
 
-    spinnerTimer = setInterval(repaintActiveBlock, 100);
+    spinnerTimer = setInterval(repaintActiveBlock, 200);
   }
 
   function stopSpinner(): void {

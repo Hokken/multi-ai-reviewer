@@ -14,7 +14,7 @@ mrev is not an editor. It runs the reviews, collects the results, and writes the
 
 Install and build the CLI first:
 
-```powershell
+```bash
 npm install
 npm run build
 npm link
@@ -22,23 +22,29 @@ npm link
 
 Then run `mrev` from the repo you want to review.
 
-If you are developing inside this repository, you can also invoke the built CLI directly with `node .\dist\src\cli\index.js`.
+If you are developing inside this repository, you can also invoke the built CLI directly with `node dist/src/cli/index.js`.
 
 **Interactive mode** (picks workflow, reviewers, and files for you):
 
-```powershell
+```bash
 mrev review
 ```
 
-This works best when the repo has a `.mrev/config.yaml` with folder paths configured (see [Repo Config](#repo-config)).
+On first run, mrev auto-creates `.mrev/` in the current repo with `config.yaml`, `reports/`, and `sessions/`. This works best when the config has folder paths configured (see [Repo Config](#repo-config)).
 
 **Direct mode** (you already have a review artifact):
 
-```powershell
-mrev review .\docs\reviews\feature-review.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
+```bash
+mrev review docs/reviews/feature-review.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
 ```
 
 mrev reads the artifact, auto-detects whether it is an investigation, plan, or implementation, sends it to the reviewer models, and saves the report.
+
+If `agent_models` is set in `.mrev/config.yaml`, you can skip `--reviewer-models`:
+
+```bash
+mrev review docs/reviews/feature-review.md
+```
 
 **Prerequisites:** The provider CLIs (claude, codex, gemini) must be installed and authenticated. Check with `mrev validate`. Common auth methods are API keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`) or login-based flows.
 
@@ -68,20 +74,20 @@ That skill is the glue between authoring work and `mrev review`:
 
 ## Common Commands
 
-```powershell
+```bash
 # Interactive launcher
 mrev review
 
-# Review a specific file (auto-detects type, models must be explicit)
-mrev review .\artifact.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
+# Review a specific file (auto-detects type)
+mrev review artifact.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
 
 # Force the review type with a subcommand
-mrev review investigation .\docs\investigations\ambient-weather.md --reviewer-models claude=claude-sonnet-4-6 gemini=gemini-3-flash-preview
-mrev review plan .\docs\plans\feature-plan.md --reviewer-models codex=gpt-5.2-codex gemini=gemini-3.1-pro-preview
-mrev review implementation .\docs\reviews\feature-review.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
+mrev review investigation docs/investigations/ambient-weather.md --reviewer-models claude=claude-sonnet-4-6 gemini=gemini-3-flash-preview
+mrev review plan docs/plans/feature-plan.md --reviewer-models codex=gpt-5.2-codex gemini=gemini-3.1-pro-preview
+mrev review implementation docs/reviews/feature-review.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
 
 # Add extra instructions to steer reviewers
-mrev review .\artifact.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex --instructions "Focus on error handling."
+mrev review artifact.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex --instructions "Focus on error handling."
 
 # Check that CLIs are installed and meet minimum versions
 mrev validate
@@ -102,30 +108,36 @@ To chain validation passes, add the previous report path to your artifact under 
 
 ## Install
 
-```powershell
+```bash
 npm install
 npm run build
 ```
 
 To make `mrev` available globally:
 
-```powershell
+```bash
 npm link
 ```
 
 Then use it from any repo:
 
-```powershell
-cd C:\path\to\other-repo
+```bash
+cd /path/to/other-repo
 mrev validate
-mrev review .\artifact.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
+mrev review artifact.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
 ```
 
 See [Install In Another Repo](#install-in-another-repo) for other methods (local dependency, tarball).
 
 ## Repo Config
 
-The interactive launcher reads `.mrev/config.yaml` from the reviewed repo. This tells it where to find artifacts and what workflows to offer.
+mrev reads `.mrev/config.yaml` from the current repo. On the first `mrev review` run, the `.mrev/` workspace is auto-created with a starter config, `reports/`, and `sessions/` folders. Subsequent runs never overwrite an existing config.
+
+The config has three sections — all optional.
+
+### `review_launcher`
+
+Controls the interactive launcher (`mrev review` with no file argument). Tells it where to find artifacts and what workflows to offer.
 
 ```yaml
 review_launcher:
@@ -141,11 +153,38 @@ review_launcher:
       mode: implementation
 ```
 
-With this in place, `mrev review` opens a terminal menu where you pick a workflow, select reviewers, and choose a file.
+`mode` can be `investigation`, `plan`, or `implementation`. If omitted, mrev auto-detects from the file content. `files_folder` is a legacy fallback when mode-specific folders are not set.
 
-`mode` can be `investigation`, `plan`, or `implementation`. If omitted, mrev auto-detects from the file content. You can add `default_reviewers` if you want repo-specific defaults, but it is optional.
+### `agent_models`
 
-`files_folder` is a legacy fallback when mode-specific folders are not set.
+Default models for each reviewer agent. When set, you can run `mrev review <file>` without `--reviewer-models`. Only declare the reviewers you use (1, 2, or all 3).
+
+```yaml
+agent_models:
+  claude: claude-sonnet-4-6
+  codex: gpt-5.2-codex
+  gemini: gemini-3-flash-preview
+```
+
+CLI flags (`--reviewer-models`, `--claude-model`, etc.) always override these values.
+
+### `review_defaults`
+
+Default values for review command flags. Lets you run `mrev review <file>` without passing the same flags every time.
+
+```yaml
+review_defaults:
+  mode: implementation
+  instructions: "Focus on security and performance"
+  repo_summary: "A TypeScript monorepo for..."
+  tech_stack:
+    - typescript
+    - node
+  verbose: false
+  gemini_strict: false
+```
+
+CLI flags always override config values. For example, `mrev review file.md --instructions "Check auth"` ignores the `instructions` value in config.
 
 ## CLI Reference
 
@@ -153,7 +192,7 @@ With this in place, `mrev review` opens a terminal menu where you pick a workflo
 
 The main command. Without a file argument (or with `--interactive`), it starts the interactive launcher. With a file, it runs the review directly.
 
-For direct CLI review runs, reviewer models must be explicit. Use `--reviewer-models` or the per-provider model flags for every active reviewer. The interactive launcher already prompts for this.
+For direct CLI review runs, reviewer models must be provided via `--reviewer-models`, per-provider model flags, or `agent_models` in `.mrev/config.yaml`. The interactive launcher already prompts for this.
 
 **Subcommands** (force the review type instead of auto-detecting):
 - `mrev review investigation <file>`
@@ -164,7 +203,7 @@ For direct CLI review runs, reviewer models must be explicit. Use `--reviewer-mo
 
 | Flag | Description |
 |------|-------------|
-| `--reviewers <agents...>` | Which agents review. If omitted, review runs use all three providers, so you must provide a model for each one. |
+| `--reviewers <agents...>` | Which agents review (e.g. `claude codex`). If omitted, reviewers are inferred from `--reviewer-models` or `agent_models` in config. |
 | `--reviewer-models <entries...>` | Per-reviewer model overrides, e.g. `claude=claude-sonnet-4-6`. |
 | `--instructions <text>` | Extra instructions appended to the reviewer task. |
 | `--mode <kind>` | Force review mode without using a subcommand. |
@@ -183,7 +222,7 @@ For direct CLI review runs, reviewer models must be explicit. Use `--reviewer-mo
 
 Advanced command for raw pipeline execution. Most users should use `mrev review` instead.
 
-```powershell
+```bash
 mrev run --task "Review auth middleware" --pipeline "review:claude > review:gemini"
 ```
 
@@ -213,13 +252,13 @@ If no explicit context is provided, mrev falls back to staged diff. If there is 
 
 Checks that the agent CLIs are installed and meet minimum version requirements.
 
-```powershell
+```bash
 mrev validate
 ```
 
 You can also validate a pipeline string:
 
-```powershell
+```bash
 mrev validate --pipeline "architect:claude > execute:codex > review:gemini"
 ```
 
@@ -227,7 +266,7 @@ mrev validate --pipeline "architect:claude > execute:codex > review:gemini"
 
 Inspect past review sessions.
 
-```powershell
+```bash
 mrev audit list                  # List all sessions
 mrev audit show <session-id>     # Show full session JSON
 mrev audit diff <session-id>     # Show diffs from a session
@@ -238,7 +277,7 @@ mrev audit search "keyword"      # Search sessions by task keyword
 
 Save and manage reusable pipeline configurations.
 
-```powershell
+```bash
 mrev preset save quick --pipeline "execute:codex" --description "Fast single-step executor"
 mrev preset list
 mrev preset show quick
@@ -247,7 +286,7 @@ mrev preset delete quick
 
 Use a saved preset with `mrev run`:
 
-```powershell
+```bash
 mrev run --task "Review the code." --preset quick
 ```
 
@@ -276,15 +315,10 @@ If you do not want to think about pipelines, use `mrev review <file>` and pass t
 
 ## Project Config
 
-Global defaults for the `run` command live in the mrev install directory at `.mrev/config.yaml`:
+The `run` command also reads `.mrev/config.yaml` from the current working directory. It uses the same `agent_models` section as the review command, plus optional fields:
 
 ```yaml
 default_pipeline: "architect:claude > execute:codex > review:claude"
-
-agent_models:
-  claude: "claude-opus-4-6"
-  codex: "gpt-5.4"
-  gemini: "gemini-3.1-pro"
 
 prompts:
   architect: |
@@ -296,48 +330,46 @@ prompts:
 
 All fields are optional. If `prompts` is omitted, built-in role prompts are used.
 
-This is separate from the repo-local `.mrev/config.yaml` in the target repo, which only controls the interactive review launcher (see [Repo Config](#repo-config)).
-
 ## Install In Another Repo
 
 Always run `mrev` from the target repo root. It uses the current working directory for reading files, staged diffs, and config, and writes session/report output to `.mrev/` in that repo.
 
 ### Global install (recommended for development)
 
-```powershell
+```bash
 # From the mrev repo:
 npm install && npm run build && npm link
 
 # From any other repo:
-cd C:\path\to\other-repo
+cd /path/to/other-repo
 mrev validate
-mrev review .\artifact.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
+mrev review artifact.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
 ```
 
 ### Local dependency
 
-```powershell
-npm install --save-dev C:\path\to\multi-ai-reviewer
+```bash
+npm install --save-dev /path/to/multi-ai-reviewer
 npx mrev validate
 ```
 
 ### Packed tarball
 
-```powershell
+```bash
 # From the mrev repo:
 npm pack
 
 # From another repo:
-npm install --save-dev .\multi-ai-reviewer-0.1.0.tgz
+npm install --save-dev multi-ai-reviewer-0.1.0.tgz
 ```
 
 ## Development
 
-```powershell
+```bash
 npm run build       # Build
 npm test            # Run tests
 npm run typecheck   # Type-check without emitting
 npm run dev         # Run from source via tsx
 ```
 
-The root handoff file is [AGENTS.md](C:/ai-conductor/AGENTS.md).
+The root handoff file is [AGENTS.md](AGENTS.md).

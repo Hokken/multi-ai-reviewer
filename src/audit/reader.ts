@@ -13,16 +13,22 @@ export async function listSessions(cwd: string): Promise<Array<{ id: string; pat
   }
 
   const sessionFiles = entries.filter((entry) => entry.endsWith(".json")).sort().reverse();
-  const sessions = await Promise.all(
+  const results = await Promise.all(
     sessionFiles.map(async (entry) => {
       const path = join(sessionsDir, entry);
-      const content = await readFile(path, "utf8");
-      const log = JSON.parse(content) as SessionLog;
-      return { id: log.sessionId, path, log };
+      try {
+        const content = await readFile(path, "utf8");
+        const log = JSON.parse(content) as SessionLog;
+        return { id: log.sessionId, path, log };
+      } catch {
+        return null;
+      }
     }),
   );
 
-  return sessions;
+  return results.filter(
+    (result): result is { id: string; path: string; log: SessionLog } => result !== null,
+  );
 }
 
 export async function getSessionById(cwd: string, sessionId: string): Promise<{ path: string; log: SessionLog } | null> {
