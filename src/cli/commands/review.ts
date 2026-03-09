@@ -38,6 +38,13 @@ const IMPLEMENTATION_REVIEW_SIGNALS = [
   "staged diff",
 ] as const;
 
+const VALIDATION_PASS_SCOPING = [
+  "This is a validation pass, not a fresh review.",
+  "The prior full assessment is included in context via the PRIOR REPORTS section.",
+  "Focus your effort on verifying the fixes claimed in the FIXES APPLIED section — do not repeat the full analysis from the first pass.",
+  "A targeted, shorter review is expected here.",
+].join(" ");
+
 export type ReviewWorkflowKind = "investigation" | "plan" | "implementation";
 
 export interface ReviewFileAnalysis {
@@ -350,6 +357,9 @@ export function buildPlanReviewTask(
       ? `Validate the applied fixes in the implementation plan "${planFile}".`
       : `Review the implementation plan in "${planFile}".`,
     formatAuthorDescription("plan", author),
+    validationPass
+      ? VALIDATION_PASS_SCOPING
+      : undefined,
     hasPriorReportContext
       ? "One or more prior review reports are also included in context. Use them to preserve reviewer context across passes and verify whether each earlier finding was fully addressed."
       : undefined,
@@ -376,6 +386,9 @@ export function buildInvestigationReviewTask(
       ? `Validate the applied fixes in the investigation "${investigationFile}".`
       : `Review the investigation in "${investigationFile}".`,
     formatAuthorDescription("investigation", author),
+    validationPass
+      ? VALIDATION_PASS_SCOPING
+      : undefined,
     hasPriorReportContext
       ? "One or more prior review reports are also included in context. Use them to preserve reviewer context across passes and verify whether each earlier finding was fully addressed."
       : undefined,
@@ -406,6 +419,9 @@ export function buildImplementationReviewTask(
       : `Review the implementation using the review instructions file "${instructionsFile}".`,
     formatAuthorDescription("implementation", author),
     "Use the instructions file plus the current staged diff when available.",
+    validationPass
+      ? VALIDATION_PASS_SCOPING
+      : undefined,
     hasPriorReportContext
       ? "One or more prior review reports are also included in context. Use them to preserve reviewer context across passes and verify whether each earlier finding was fully addressed."
       : undefined,
