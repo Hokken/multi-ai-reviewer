@@ -6,6 +6,7 @@ import { join } from "node:path";
 import {
   buildReviewLauncherConfirmationLines,
   buildInteractiveReviewCommandPreview,
+  countRenderedPromptLines,
   listReviewLauncherFiles,
   resolveReviewLauncherFilesFolder,
   resolveReviewLauncherProfiles,
@@ -135,6 +136,19 @@ describe("interactive review launcher", () => {
     expect(lines).toContain("Missing prior reports: .mrev/reports/missing.md");
   });
 
+  it("counts rendered prompt lines without overcounting the trailing newline", () => {
+    expect(countRenderedPromptLines("")).toBe(0);
+    expect(countRenderedPromptLines("Select workflow\n", 80)).toBe(1);
+    expect(countRenderedPromptLines("Title\nHelp\n\n> First option\n", 80)).toBe(4);
+    expect(countRenderedPromptLines("Title\nHelp\n\n> First option", 80)).toBe(4);
+  });
+
+  it("counts soft-wrapped prompt rows using the terminal width", () => {
+    expect(countRenderedPromptLines("> 1234567890\n", 5)).toBe(3);
+    expect(countRenderedPromptLines("Title\n> 1234567890\n", 5)).toBe(4);
+    expect(countRenderedPromptLines("\n> 1234\n", 4)).toBe(3);
+  });
+
   it("lists review files from the configured folder and extracts headings", async () => {
     const cwd = await mkdtemp(join(tmpdir(), "conductor-review-launcher-"));
 
@@ -177,4 +191,3 @@ describe("interactive review launcher", () => {
     }
   });
 });
-

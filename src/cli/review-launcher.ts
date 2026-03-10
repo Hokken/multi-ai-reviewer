@@ -1149,7 +1149,7 @@ class InteractivePromptSession {
 
         const frame = render();
         stdout.write(frame);
-        renderedLineCount = frame.split("\n").length;
+        renderedLineCount = countRenderedPromptLines(frame);
       };
 
       const cleanup = () => {
@@ -1215,6 +1215,25 @@ function restorePromptInputState(
   } catch {
     // Ignore pause failures and continue cleanup.
   }
+}
+
+export function countRenderedPromptLines(
+  frame: string,
+  columns = process.stdout.columns ?? 80,
+): number {
+  if (frame.length === 0) {
+    return 0;
+  }
+
+  const safeColumns = Number.isFinite(columns) && columns > 0 ? columns : 80;
+  const logicalLines = frame.endsWith("\n")
+    ? frame.slice(0, -1).split("\n")
+    : frame.split("\n");
+
+  return logicalLines.reduce((total, line) => {
+    const occupiedRows = line.length === 0 ? 1 : Math.ceil(line.length / safeColumns);
+    return total + occupiedRows;
+  }, 0);
 }
 
 function withBackChoice<TValue>(
