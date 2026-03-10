@@ -44,6 +44,15 @@ const VALIDATION_PASS_SCOPING = [
   "Focus your effort on verifying the fixes claimed in the FIXES APPLIED section — do not repeat the full analysis from the first pass.",
   "A targeted, shorter review is expected here.",
 ].join(" ");
+const FIXES_APPLIED_PLACEHOLDER_PATTERNS = [
+  /^this section is intentionally empty on the first pass\.?$/i,
+  /^none\.?$/i,
+  /^n\/a\.?$/i,
+  /^not applicable\.?$/i,
+  /^no fixes applied(?: yet)?\.?$/i,
+  /^no fixes were applied(?: yet)?\.?$/i,
+  /^none\.?\s*this is a research(?:\/investigation)? report only\.?$/i,
+] as const;
 
 export type ReviewWorkflowKind = "investigation" | "plan" | "implementation";
 
@@ -625,18 +634,34 @@ export function detectValidationPass(content: string): boolean {
   }
 
   const section = sectionLines.join("\n");
+  const normalizedSection = section
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (normalizedSection.length === 0) {
+    return false;
+  }
+
   if (/####\s*Fix\b/i.test(section)) {
     return true;
+  }
+
+  if (FIXES_APPLIED_PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(normalizedSection))) {
+    return false;
   }
 
   if (/intentionally empty|first pass/i.test(section)) {
     return false;
   }
 
-  return section
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .some((line) => line.length > 20);
+  return (
+    /(?:^|\s)(?:fix\s+\d+|status|resolution|files touched|severity)\b/i.test(normalizedSection)
+    || normalizedSection.length > 20
+  );
 }
 
 export function detectAuthoringAgent(content: string): AgentId | undefined {

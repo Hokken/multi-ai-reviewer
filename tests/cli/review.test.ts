@@ -309,6 +309,18 @@ describe("review workflows", () => {
     expect(detected).toBe(false);
   });
 
+  it("does not treat research-only placeholder text as a validation pass", () => {
+    const detected = detectValidationPass(
+      [
+        "## FIXES APPLIED",
+        "",
+        "None. This is a research/investigation report only.",
+      ].join("\n"),
+    );
+
+    expect(detected).toBe(false);
+  });
+
   it("detects authoring agent from content", () => {
     const author = detectAuthoringAgent(
       [
@@ -431,6 +443,38 @@ describe("review workflows", () => {
       });
       expect(prepared.task).toContain('Review the investigation in "docs-investigation.md".');
       expect(prepared.files).toEqual(["docs-investigation.md", "AGENTS.md"]);
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps investigation first-pass reviews broad when FIXES APPLIED only contains research placeholder text", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "conductor-review-"));
+
+    try {
+      await writeFile(join(cwd, "AGENTS.md"), "repo instructions", "utf8");
+      await writeFile(
+        join(cwd, "docs-investigation.md"),
+        [
+          "# Investigation",
+          "## Problem Statement",
+          "## Constraints",
+          "## FIXES APPLIED",
+          "",
+          "None. This is a research/investigation report only.",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const prepared = await prepareInvestigationReviewWorkflow(cwd, "docs-investigation.md", {
+        reviewerModels: {
+          codex: "gpt-5.2-codex",
+        },
+      });
+
+      expect(prepared.validationPass).toBe(false);
+      expect(prepared.task).toContain('Review the investigation in "docs-investigation.md".');
+      expect(prepared.task).not.toContain("Validate the applied fixes in the investigation");
     } finally {
       await rm(cwd, { recursive: true, force: true });
     }
