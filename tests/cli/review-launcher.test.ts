@@ -6,6 +6,7 @@ import { join } from "node:path";
 import {
   buildReviewLauncherConfirmationLines,
   buildInteractiveReviewCommandPreview,
+  clearInteractiveLauncherTerminal,
   countRenderedPromptLines,
   listReviewLauncherFiles,
   resolveReviewLauncherFilesFolder,
@@ -163,6 +164,34 @@ describe("interactive review launcher", () => {
     expect(countRenderedPromptLines("> 1234567890\n", 5)).toBe(3);
     expect(countRenderedPromptLines("Title\n> 1234567890\n", 5)).toBe(4);
     expect(countRenderedPromptLines("\n> 1234\n", 4)).toBe(3);
+  });
+
+  it("clears the interactive launcher terminal for tty sessions", () => {
+    const writes: string[] = [];
+
+    clearInteractiveLauncherTerminal({
+      isTTY: true,
+      write(chunk: string): boolean {
+        writes.push(chunk);
+        return true;
+      },
+    });
+
+    expect(writes).toEqual(["\x1B[2J\x1B[3J\x1B[H"]);
+  });
+
+  it("does not clear the interactive launcher terminal when stdout is not a tty", () => {
+    const writes: string[] = [];
+
+    clearInteractiveLauncherTerminal({
+      isTTY: false,
+      write(chunk: string): boolean {
+        writes.push(chunk);
+        return true;
+      },
+    });
+
+    expect(writes).toEqual([]);
   });
 
   it("lists review files from the configured folder and extracts headings", async () => {

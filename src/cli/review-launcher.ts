@@ -338,6 +338,7 @@ export async function runInteractiveReviewLauncher(
       await saveRepoReviewLauncherLastUsed(cwd, {
         reviewer_models: currentReviewerModels.map((entry) => entry.model),
       });
+      clearInteractiveLauncherTerminal();
       lastExitCode = await runAutoReviewCommand(selectedFile.path, {
         ...options,
         mode: selectedMode,
@@ -354,6 +355,7 @@ export async function runInteractiveReviewLauncher(
         return lastExitCode;
       }
 
+      clearInteractiveLauncherTerminal();
       currentStep = "file";
     }
   } catch (error) {
@@ -1238,6 +1240,16 @@ export function countRenderedPromptLines(
     const occupiedRows = line.length === 0 ? 1 : Math.ceil(line.length / safeColumns);
     return total + occupiedRows;
   }, 0);
+}
+
+export function clearInteractiveLauncherTerminal(
+  stdout: Pick<NodeJS.WriteStream, "isTTY" | "write"> = process.stdout,
+): void {
+  if (!stdout.isTTY) {
+    return;
+  }
+
+  stdout.write("\x1B[2J\x1B[3J\x1B[H");
 }
 
 function withBackChoice<TValue>(
