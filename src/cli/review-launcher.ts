@@ -82,6 +82,10 @@ const SELECTABLE_MODELS: SelectableModel[] = [
   },
   {
     provider: "codex",
+    model: "gpt-5.2",
+  },
+  {
+    provider: "codex",
     model: "gpt-5.2-codex",
   },
   {

@@ -7,6 +7,7 @@ import type { AgentAdapter } from "../../agents/adapters/types.js";
 import { getRolePrompt, resolveAgentModels } from "../../config/project.js";
 import { buildContext } from "../../context/builder.js";
 import type {
+  AgentId,
   AgentModelConfig,
   ExecutionStepResult,
   ParsedPipeline,
@@ -36,6 +37,7 @@ export interface RunExecutionOptions {
   repoSummary?: string | undefined;
   techStack?: string[] | undefined;
   files?: string[] | undefined;
+  agentFiles?: Partial<Record<AgentId, string[]>> | undefined;
   diff?: boolean | undefined;
   symbol?: string | undefined;
   geminiStrict?: boolean | undefined;
@@ -91,7 +93,7 @@ export async function executePipeline(
         const context = await buildContext({
           cwd: input.options.contextCwd,
           role: step.role,
-          files: input.options.files,
+          files: resolveContextFilesForStep(step.agent, input.options.files, input.options.agentFiles),
           diff: input.options.diff,
           symbol: input.options.symbol,
           repoSummary: input.options.repoSummary,
@@ -205,4 +207,17 @@ export async function executePipeline(
   }
 
   return { steps: allResults };
+}
+
+function resolveContextFilesForStep(
+  agent: AgentId,
+  sharedFiles?: string[] | undefined,
+  agentFiles?: Partial<Record<AgentId, string[]>> | undefined,
+): string[] | undefined {
+  const merged = [
+    ...(sharedFiles ?? []),
+    ...(agentFiles?.[agent] ?? []),
+  ];
+  const unique = Array.from(new Set(merged));
+  return unique.length > 0 ? unique : undefined;
 }

@@ -8,7 +8,11 @@ import { loadRepoProjectConfig } from "../../config/project.js";
 import { ensureWorkspace, getReportPathPattern, getReportPathScanner } from "../../config/storage.js";
 
 const ALL_AGENTS: AgentId[] = ["claude", "codex", "gemini"];
-const REPO_INSTRUCTION_FILES = ["CLAUDE.md", "AGENTS.md", "GEMINI.md"] as const;
+const REPO_INSTRUCTION_FILE_CANDIDATES: Record<AgentId, readonly string[]> = {
+  claude: ["CLAUDE.md", "AGENTS.md"],
+  codex: ["AGENTS.md"],
+  gemini: ["GEMINI.md", "AGENTS.md"],
+} as const;
 const PLAN_REVIEW_SIGNALS = [
   "implementation plan",
   "test matrix",
@@ -87,6 +91,7 @@ export interface PreparedReviewWorkflow {
   task: string;
   pipeline: string;
   files: string[];
+  agentFiles: Partial<Record<AgentId, string[]>>;
   reviewers: AgentId[];
   validationPass: boolean;
   hasPriorReportContext: boolean;
@@ -146,6 +151,7 @@ export async function runInvestigationReviewCommand(
       task: prepared.task,
       pipeline: prepared.pipeline,
       files: prepared.files,
+      agentFiles: prepared.agentFiles,
       repoSummary: options.repoSummary,
       techStack: options.techStack,
       claudeModel: prepared.modelOverrides.claudeModel,
@@ -169,6 +175,7 @@ export async function runPlanReviewCommand(
       task: prepared.task,
       pipeline: prepared.pipeline,
       files: prepared.files,
+      agentFiles: prepared.agentFiles,
       repoSummary: options.repoSummary,
       techStack: options.techStack,
       claudeModel: prepared.modelOverrides.claudeModel,
@@ -201,6 +208,7 @@ export async function runImplementationReviewCommand(
       task: prepared.task,
       pipeline: prepared.pipeline,
       files: prepared.files,
+      agentFiles: prepared.agentFiles,
       diff: true,
       repoSummary: options.repoSummary,
       techStack: options.techStack,
@@ -258,6 +266,7 @@ export async function preparePlanReviewWorkflow(
     options.extraFiles,
     analysis.validationPass,
   );
+  const agentFiles = await resolveReviewAgentFiles(cwd, reviewers);
 
   return {
     kind: "plan",
@@ -270,6 +279,7 @@ export async function preparePlanReviewWorkflow(
     ),
     pipeline: buildParallelReviewPipeline(reviewers),
     files: workflowContext.files,
+    agentFiles,
     reviewers,
     validationPass: analysis.validationPass,
     hasPriorReportContext: workflowContext.hasPriorReportContext,
@@ -296,6 +306,7 @@ export async function prepareInvestigationReviewWorkflow(
     options.extraFiles,
     analysis.validationPass,
   );
+  const agentFiles = await resolveReviewAgentFiles(cwd, reviewers);
 
   return {
     kind: "investigation",
@@ -308,6 +319,7 @@ export async function prepareInvestigationReviewWorkflow(
     ),
     pipeline: buildParallelReviewPipeline(reviewers),
     files: workflowContext.files,
+    agentFiles,
     reviewers,
     validationPass: analysis.validationPass,
     hasPriorReportContext: workflowContext.hasPriorReportContext,
@@ -334,6 +346,7 @@ export async function prepareImplementationReviewWorkflow(
     options.extraFiles,
     analysis.validationPass,
   );
+  const agentFiles = await resolveReviewAgentFiles(cwd, reviewers);
 
   return {
     kind: "implementation",
@@ -346,6 +359,7 @@ export async function prepareImplementationReviewWorkflow(
     ),
     pipeline: buildParallelReviewPipeline(reviewers),
     files: workflowContext.files,
+    agentFiles,
     reviewers,
     validationPass: analysis.validationPass,
     hasPriorReportContext: workflowContext.hasPriorReportContext,
@@ -538,7 +552,6 @@ export async function resolveReviewWorkflowContext(
   hasPriorReportContext: boolean;
   missingReferencedReports: string[];
 }> {
-  const repoInstructionFiles = await findRepoInstructionFiles(cwd);
   const referencedReports = validationPass
     ? await resolveReferencedValidationReports(cwd, primaryFile)
     : {
@@ -550,7 +563,6 @@ export async function resolveReviewWorkflowContext(
     : referencedReports.found;
   const combined = [
     primaryFile,
-    ...repoInstructionFiles,
     ...prioritizedReports,
     ...(extraFiles ?? []),
   ];
@@ -757,20 +769,37 @@ function trimOrUndefined(value?: string | undefined): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-async function findRepoInstructionFiles(cwd: string): Promise<string[]> {
-  const found: string[] = [];
+export async function resolveReviewAgentFiles(
+  cwd: string,
+  reviewers: AgentId[],
+): Promise<Partial<Record<AgentId, string[]>>> {
+  const resolved: Partial<Record<AgentId, string[]>> = {};
 
-  for (const fileName of REPO_INSTRUCTION_FILES) {
+  for (const reviewer of Array.from(new Set(reviewers))) {
+    const instructionFile = await findRepoInstructionFileForAgent(cwd, reviewer);
+    if (instructionFile) {
+      resolved[reviewer] = [instructionFile];
+    }
+  }
+
+  return resolved;
+}
+
+async function findRepoInstructionFileForAgent(
+  cwd: string,
+  agent: AgentId,
+): Promise<string | undefined> {
+  for (const fileName of REPO_INSTRUCTION_FILE_CANDIDATES[agent]) {
     const absolutePath = resolve(cwd, fileName);
     try {
       await access(absolutePath, fsConstants.F_OK);
-      found.push(fileName);
+      return fileName;
     } catch {
       continue;
     }
   }
 
-  return found;
+  return undefined;
 }
 
 async function resolveReferencedValidationReports(
@@ -920,6 +949,7 @@ function buildRunOptions(input: {
   task: string;
   pipeline: string;
   files: string[];
+  agentFiles?: Partial<Record<AgentId, string[]>> | undefined;
   diff?: boolean | undefined;
   repoSummary?: string | undefined;
   techStack?: string[] | undefined;
@@ -935,6 +965,7 @@ function buildRunOptions(input: {
     task: input.task,
     pipeline: input.pipeline,
     files: input.files,
+    ...(input.agentFiles ? { agentFiles: input.agentFiles } : {}),
     reportOnly: true,
     ...(input.interactiveProgress !== undefined
       ? { interactiveProgress: input.interactiveProgress }

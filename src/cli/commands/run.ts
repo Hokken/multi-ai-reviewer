@@ -20,7 +20,7 @@ import { prepareExecutionWorkspace } from "../../execution/workspace.js";
 import { executePipeline } from "../../orchestrator/pipeline/executor.js";
 import { parsePipeline, PipelineParseError } from "../../orchestrator/pipeline/parser.js";
 import { validatePipeline } from "../../orchestrator/pipeline/validator.js";
-import type { ParsedPipeline, PriorStepOutput } from "../../types/index.js";
+import type { AgentId, ParsedPipeline, PriorStepOutput } from "../../types/index.js";
 
 export interface RunCommandOptions {
   task?: string;
@@ -31,6 +31,7 @@ export interface RunCommandOptions {
   repoSummary?: string;
   techStack?: string[];
   files?: string[];
+  agentFiles?: Partial<Record<AgentId, string[]>> | undefined;
   diff?: boolean;
   symbol?: string;
   verbose?: boolean;
@@ -92,13 +93,13 @@ export async function runRunCommand(options: RunCommandOptions): Promise<number>
   for (const group of pipeline.groups) {
     for (const step of group.steps) {
       stepIndex += 1;
-      const context = await buildContext({
-        cwd: process.cwd(),
-        role: step.role,
-        files: options.files,
-        diff: options.diff,
-        symbol: options.symbol,
-        repoSummary: options.repoSummary,
+        const context = await buildContext({
+          cwd: process.cwd(),
+          role: step.role,
+          files: resolveContextFilesForStep(step.agent, options.files, options.agentFiles),
+          diff: options.diff,
+          symbol: options.symbol,
+          repoSummary: options.repoSummary,
         techStack: options.techStack,
       });
       const prompt = buildPrompt({
@@ -160,6 +161,7 @@ async function runActualPipeline(
         repoSummary: options.repoSummary,
         techStack: options.techStack,
         files: options.files,
+        agentFiles: options.agentFiles,
         diff: options.diff,
         symbol: options.symbol,
         geminiStrict: options.geminiStrict,
@@ -184,6 +186,7 @@ async function runActualPipeline(
         repoSummary: options.repoSummary,
         techStack: options.techStack,
         files: options.files,
+        agentFiles: options.agentFiles,
         diff: options.diff,
         symbol: options.symbol,
         geminiStrict: options.geminiStrict,
@@ -239,6 +242,19 @@ async function runActualPipeline(
     progress.stop();
     await workspace.cleanup();
   }
+}
+
+function resolveContextFilesForStep(
+  agent: AgentId,
+  sharedFiles?: string[] | undefined,
+  agentFiles?: Partial<Record<AgentId, string[]>> | undefined,
+): string[] | undefined {
+  const merged = [
+    ...(sharedFiles ?? []),
+    ...(agentFiles?.[agent] ?? []),
+  ];
+  const unique = Array.from(new Set(merged));
+  return unique.length > 0 ? unique : undefined;
 }
 
 function resolvePipelineString(

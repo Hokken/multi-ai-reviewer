@@ -101,6 +101,21 @@ describe("interactive review launcher", () => {
     );
   });
 
+  it("builds a command preview for the plain gpt-5.2 codex model", () => {
+    const command = buildInteractiveReviewCommandPreview({
+      file: "docs/reviews/auth-review.md",
+      reviewers: ["codex"],
+      reviewerModels: {
+        codex: "gpt-5.2",
+      },
+      options: {},
+    });
+
+    expect(command).toBe(
+      "mrev review docs/reviews/auth-review.md --reviewers codex --reviewer-models codex=gpt-5.2",
+    );
+  });
+
   it("builds validation-pass confirmation lines with prior report context", () => {
     const lines = buildReviewLauncherConfirmationLines({
       profileLabel: "review",
@@ -118,6 +133,7 @@ describe("interactive review launcher", () => {
           ".mrev/reports/pass-1.md",
           ".mrev/reports/pass-2.md",
         ],
+        agentFiles: {},
         reviewers: ["claude", "codex"],
         validationPass: true,
         hasPriorReportContext: true,

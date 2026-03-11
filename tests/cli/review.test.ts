@@ -19,6 +19,7 @@ import {
   prepareImplementationReviewWorkflow,
   prepareInvestigationReviewWorkflow,
   preparePlanReviewWorkflow,
+  resolveReviewAgentFiles,
   resolveReviewWorkflowContext,
   resolveReviewWorkflowFiles,
   resolveReviewers,
@@ -347,7 +348,7 @@ describe("review workflows", () => {
     ]);
   });
 
-  it("auto-includes repo instruction files when present", async () => {
+  it("keeps shared workflow files separate from repo instruction files", async () => {
     const cwd = await mkdtemp(join(tmpdir(), "conductor-review-"));
 
     try {
@@ -356,7 +357,27 @@ describe("review workflows", () => {
 
       const files = await resolveReviewWorkflowFiles(cwd, "docs/review.md", ["README.md"]);
 
-      expect(files).toEqual(["docs/review.md", "CLAUDE.md", "AGENTS.md", "README.md"]);
+      expect(files).toEqual(["docs/review.md", "README.md"]);
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("assigns provider-specific repo instruction files to each reviewer", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "conductor-review-"));
+
+    try {
+      await writeFile(join(cwd, "CLAUDE.md"), "claude repo instructions", "utf8");
+      await writeFile(join(cwd, "AGENTS.md"), "codex repo instructions", "utf8");
+      await writeFile(join(cwd, "GEMINI.md"), "gemini repo instructions", "utf8");
+
+      const files = await resolveReviewAgentFiles(cwd, ["claude", "codex", "gemini"]);
+
+      expect(files).toEqual({
+        claude: ["CLAUDE.md"],
+        codex: ["AGENTS.md"],
+        gemini: ["GEMINI.md"],
+      });
     } finally {
       await rm(cwd, { recursive: true, force: true });
     }
@@ -390,6 +411,10 @@ describe("review workflows", () => {
       expect(prepared).toMatchObject({
         kind: "plan",
         pipeline: "review:codex | review:gemini",
+        agentFiles: {
+          codex: ["AGENTS.md"],
+          gemini: ["AGENTS.md"],
+        },
         reviewers: ["codex", "gemini"],
         validationPass: false,
         hasPriorReportContext: false,
@@ -400,7 +425,7 @@ describe("review workflows", () => {
         },
       });
       expect(prepared.task).toContain('Review the implementation plan in "docs/PLAN.md".');
-      expect(prepared.files).toEqual(["docs/PLAN.md", "AGENTS.md"]);
+      expect(prepared.files).toEqual(["docs/PLAN.md"]);
     } finally {
       await rm(cwd, { recursive: true, force: true });
     }
@@ -432,6 +457,10 @@ describe("review workflows", () => {
       expect(prepared).toMatchObject({
         kind: "investigation",
         pipeline: "review:codex | review:gemini",
+        agentFiles: {
+          codex: ["AGENTS.md"],
+          gemini: ["AGENTS.md"],
+        },
         reviewers: ["codex", "gemini"],
         validationPass: false,
         hasPriorReportContext: false,
@@ -442,7 +471,7 @@ describe("review workflows", () => {
         },
       });
       expect(prepared.task).toContain('Review the investigation in "docs-investigation.md".');
-      expect(prepared.files).toEqual(["docs-investigation.md", "AGENTS.md"]);
+      expect(prepared.files).toEqual(["docs-investigation.md"]);
     } finally {
       await rm(cwd, { recursive: true, force: true });
     }
@@ -473,6 +502,9 @@ describe("review workflows", () => {
       });
 
       expect(prepared.validationPass).toBe(false);
+      expect(prepared.agentFiles).toEqual({
+        codex: ["AGENTS.md"],
+      });
       expect(prepared.task).toContain('Review the investigation in "docs-investigation.md".');
       expect(prepared.task).not.toContain("Validate the applied fixes in the investigation");
     } finally {
@@ -515,6 +547,7 @@ describe("review workflows", () => {
 
       expect(prepared.validationPass).toBe(true);
       expect(prepared.hasPriorReportContext).toBe(true);
+      expect(prepared.agentFiles).toEqual({});
       expect(prepared.files).toEqual([
         "docs/plan.md",
         ".mrev/reports/plan-pass-1.md",
@@ -561,6 +594,7 @@ describe("review workflows", () => {
 
       expect(prepared.validationPass).toBe(true);
       expect(prepared.hasPriorReportContext).toBe(true);
+      expect(prepared.agentFiles).toEqual({});
       expect(prepared.files).toEqual([
         "investigation.md",
         ".mrev/reports/investigation-pass-1.md",
@@ -822,6 +856,7 @@ describe("review workflows", () => {
       expect(prepared).toMatchObject({
         kind: "implementation",
         pipeline: "review:claude | review:codex",
+        agentFiles: {},
         reviewers: ["claude", "codex"],
         validationPass: true,
         hasPriorReportContext: true,
