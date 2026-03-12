@@ -1,5 +1,5 @@
 ---
-name: investigate
+name: mrev-investigate
 description: Investigate a topic, bug, or system area and produce a structured investigation report in docs/investigations. Use when you need to deeply research a codebase concern, bug, incident, or architectural question and capture findings for future reference.
 argument-hint: "subject-of-investigation"
 ---

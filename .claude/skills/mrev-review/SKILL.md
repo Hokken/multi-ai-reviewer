@@ -1,6 +1,8 @@
 ---
-name: review-instructions
+name: mrev-review
 description: Create or update a workflow review artifact markdown file for the current session. Use when preparing investigation artifacts, implementation plans, or implementation review instructions for later multi-LLM review passes.
+argument-hint: "feature-name"
+disable-model-invocation: true
 ---
 
 Create or update a workflow review artifact markdown file for the current session.

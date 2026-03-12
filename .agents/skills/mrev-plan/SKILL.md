@@ -1,8 +1,7 @@
 ---
-name: plan
+name: mrev-plan
 description: Create or update an implementation plan markdown artifact for the current session. Use when turning an investigation or scoped request into a sequenced plan that is meant to be reviewed later with mrev review plan.
 argument-hint: "feature-name"
-disable-model-invocation: true
 ---
 
 Create or update an implementation plan markdown artifact for the current session.
