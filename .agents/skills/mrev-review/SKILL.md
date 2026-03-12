@@ -67,7 +67,7 @@ If the target file already exists and it represents the same artifact for the sa
 - update it in place
 - preserve the existing content
 - refresh any sections that are now stale
-- append or update the `FIXES APPLIED` section instead of creating a second artifact for the same work
+- append new entries to the `FIXES APPLIED` section instead of creating a second artifact for the same work
 
 ## Goal
 
@@ -247,6 +247,14 @@ This section is intentionally empty on the first pass.
 ```
 
 On later passes, populate it so reviewers can validate whether prior findings were correctly addressed.
+
+### Mandatory: apply fixes to the codebase or artifact first
+
+Before adding entries to this section, you MUST actually implement the reviewer's suggestions in the code or artifact. Do not just document the fix — apply it. The FIXES APPLIED section is a record of work you already did, not a plan for future work. If a reviewer says to rename a variable, rename it. If a reviewer says to add error handling, add it. If a reviewer says to restructure a section, restructure it. Skipping the actual fix and only updating this section defeats the entire purpose of the review workflow.
+
+### Previous fix entries are immutable
+
+Existing `#### Fix N:` entries from prior passes MUST NOT be altered, reworded, reordered, or removed. They are an append-only historical record. When adding new fixes after a new review pass, continue the numbering sequentially from where it left off (e.g., if Fix 1 through Fix 4 already exist, the next entry is Fix 5). Never renumber, merge, split, or edit earlier entries.
 
 Reviewers should use this section to understand:
 - what was fixed
