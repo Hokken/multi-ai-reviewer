@@ -61,7 +61,11 @@ Name the file using a short kebab-case feature summary:
 If the user supplied a feature name in `$ARGUMENTS`, use it for `<feature-name>`.
 If no feature name was provided, infer a reasonable kebab-case name from the work completed in this session.
 
-If the target file already exists:
+For `implementation` mode, if the work has moved to a new phase, milestone, or materially different implementation slice, create a new review artifact instead of rewriting the earlier implementation review file. Reusing the older file can leave stale `FIXES APPLIED` and `PRIOR REPORTS` entries behind, which can make a fresh review look like a validation pass when it is really a new first pass for later work.
+
+When creating a later implementation review artifact, preserve the earlier implementation review artifact and point to it from the new file so reviewers can recover the relevant prior phase context. Prefer filenames that make the slice obvious, such as `<feature-name>-phase-2-review.md` or `<feature-name>-step-2-review.md`.
+
+If the target file already exists and it represents the same artifact for the same workflow slice:
 - update it in place
 - preserve the existing content
 - refresh any sections that are now stale
@@ -177,6 +181,25 @@ Include:
 - upstream or downstream integration files
 - important supporting code or data files even if unchanged
 - schema, migration, infrastructure, or config files needed to understand runtime behavior
+
+### RELATED ARTIFACTS
+
+When this artifact continues, supersedes, or depends on an earlier artifact from the same workflow, include a `RELATED ARTIFACTS` section before `PRIOR REPORTS`.
+
+For multi-phase implementation work, always list the previous implementation review artifact path here so reviewers can recover the earlier phase context without mistaking the new artifact for a validation pass.
+
+Use repo-relative paths.
+
+Example:
+
+```md
+## RELATED ARTIFACTS
+
+- docs/reviews/feature-phase-1-review.md
+- docs/plans/feature-plan.md
+```
+
+Do not put prior review artifact paths in `PRIOR REPORTS` unless they are actual Multi AI Reviewer report files under `.mrev/reports/`.
 
 ### PRIOR REPORTS
 
