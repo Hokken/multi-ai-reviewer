@@ -218,23 +218,23 @@ function buildAuthorFollowUp(
   if (kind === "investigation") {
     return (
       "After addressing reviewer suggestions, update the `FIXES APPLIED` " +
-      "section and keep the `PRIOR REPORTS` section current in the original " +
-      "investigation file before running the next validation pass."
+      "section and add the relative path of this report to the `PRIOR REPORTS` " +
+      "section in the original investigation file before running the next validation pass."
     );
   }
 
   if (kind === "plan") {
     return (
       "After addressing reviewer suggestions, update the `FIXES APPLIED` " +
-      "section and keep the `PRIOR REPORTS` section current in the original " +
-      "plan file before running the next validation pass."
+      "section and add the relative path of this report to the `PRIOR REPORTS` " +
+      "section in the original plan file before running the next validation pass."
     );
   }
 
   return (
     "After addressing reviewer suggestions, update the `FIXES APPLIED` " +
-    "section and keep the `PRIOR REPORTS` section current in the original " +
-    "review instructions file before running the next validation pass."
+    "section and add the relative path of this report to the `PRIOR REPORTS` " +
+    "section in the original review instructions file before running the next validation pass."
   );
 }
 
