@@ -237,7 +237,7 @@ Provide a table of repo-relative files with a short purpose description. Include
 
 If this is a validation pass, always include `PRIOR REPORTS` before `FIXES APPLIED`.
 
-List every prior Multi AI Reviewer report that should stay in reviewer context, using repo-relative paths under `.mrev/reports/`.
+List the most recent prior Multi AI Reviewer report that should stay in reviewer context, using a repo-relative path under `.mrev/reports/`.
 
 Example:
 
@@ -245,14 +245,12 @@ Example:
 ## PRIOR REPORTS
 
 - .mrev/reports/2026-03-08-first-pass.md
-- .mrev/reports/2026-03-09-second-pass.md
 ```
 
 If the artifact already contains a `PRIOR REPORTS` section:
 
 - preserve it
-- keep existing relevant entries
-- append any new prior-pass report paths that now matter
+- replace older `.mrev/reports/...` entries with the single most recent prior-pass report path
 
 ### FIXES APPLIED
 
@@ -266,7 +264,7 @@ On the first pass, use this exact form:
 This section is intentionally empty on the first pass.
 ```
 
-On later passes, populate it so reviewers can validate the claimed fixes against the plan and the prior reports.
+On later passes, populate it so reviewers can validate the claimed fixes against the plan and the most recent prior report.
 
 For each fix, use this format:
 

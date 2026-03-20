@@ -9,6 +9,7 @@ import {
   clearInteractiveLauncherTerminal,
   countRenderedPromptLines,
   listReviewLauncherFiles,
+  prepareInteractiveLauncherPostRunPrompt,
   resolveReviewLauncherFilesFolder,
   resolveReviewLauncherProfiles,
 } from "../../src/cli/review-launcher.js";
@@ -135,6 +136,7 @@ describe("interactive review launcher", () => {
           ".mrev/reports/pass-2.md",
         ],
         agentFiles: {},
+        agentResumeSessions: {},
         reviewers: ["claude", "codex"],
         validationPass: true,
         hasPriorReportContext: true,
@@ -192,6 +194,24 @@ describe("interactive review launcher", () => {
     });
 
     expect(writes).toEqual([]);
+  });
+
+  it("clears the terminal before re-entering the post-run launcher prompt", () => {
+    const events: string[] = [];
+
+    prepareInteractiveLauncherPostRunPrompt({
+      enterMenuScreen() {
+        events.push("enter");
+      },
+    }, {
+      isTTY: true,
+      write(chunk: string): boolean {
+        events.push(chunk);
+        return true;
+      },
+    });
+
+    expect(events).toEqual(["\x1B[2J\x1B[3J\x1B[H", "enter"]);
   });
 
   it("lists review files from the configured folder and extracts headings", async () => {

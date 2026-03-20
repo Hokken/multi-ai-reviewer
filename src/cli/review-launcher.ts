@@ -346,7 +346,7 @@ export async function runInteractiveReviewLauncher(
         reviewerModels: reviewerModelMap,
       });
 
-      promptSession.enterMenuScreen();
+      prepareInteractiveLauncherPostRunPrompt(promptSession);
       const nextAction = await promptSession.selectPostRunActionResilient({
         exitCode: lastExitCode,
         reviewFile: selectedFile.path,
@@ -480,10 +480,12 @@ export function buildReviewLauncherConfirmationLines(input: {
   }
 
   if (input.preparedWorkflow.validationPass) {
-    const priorReportCount = input.preparedWorkflow.files.filter((file) =>
-      getReportPathPattern().test(file)
-    ).length;
+    const priorReportCount = countPriorReportContextFiles(input.preparedWorkflow);
     lines.push(`Prior reports: ${priorReportCount} included`);
+    const resumedAgents = Object.keys(input.preparedWorkflow.agentResumeSessions);
+    if (resumedAgents.length > 0) {
+      lines.push(`Resumed reviewer sessions: ${resumedAgents.join(", ")}`);
+    }
     if (input.preparedWorkflow.missingReferencedReports.length > 0) {
       lines.push(
         `Missing prior reports: ${input.preparedWorkflow.missingReferencedReports.join(", ")}`,
@@ -493,6 +495,17 @@ export function buildReviewLauncherConfirmationLines(input: {
 
   lines.push(`Command: ${input.commandPreview}`);
   return lines;
+}
+
+function countPriorReportContextFiles(workflow: PreparedReviewWorkflow): number {
+  const files = new Set(workflow.files);
+  for (const agentFiles of Object.values(workflow.agentFiles)) {
+    for (const file of agentFiles ?? []) {
+      files.add(file);
+    }
+  }
+
+  return Array.from(files).filter((file) => getReportPathPattern().test(file)).length;
 }
 
 function buildProfile(key: string, profile: ReviewLauncherProfileConfig): ReviewLauncherProfile {
@@ -1250,6 +1263,14 @@ export function clearInteractiveLauncherTerminal(
   }
 
   stdout.write("\x1B[2J\x1B[3J\x1B[H");
+}
+
+export function prepareInteractiveLauncherPostRunPrompt(
+  promptSession: Pick<InteractivePromptSession, "enterMenuScreen">,
+  stdout: Pick<NodeJS.WriteStream, "isTTY" | "write"> = process.stdout,
+): void {
+  clearInteractiveLauncherTerminal(stdout);
+  promptSession.enterMenuScreen();
 }
 
 function withBackChoice<TValue>(

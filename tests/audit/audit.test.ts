@@ -56,11 +56,14 @@ describe("audit persistence", () => {
       expect(markdown).toContain("File:** review-instructions.md");
       expect(markdown).toContain("Mode:** implementation");
       expect(markdown).toContain("Reviewer models:** claude=claude-sonnet-4-6");
+      expect(markdown).toContain("Review tokens:** input 200, cached 50, output 20, total 270");
       expect(markdown).toContain("## Key Findings");
       expect(markdown).toContain("No reviewer issues were recorded.");
       expect(markdown).toContain("### Step 1 - execute:codex");
       expect(markdown).toContain("- **Model:** gpt-5.2-codex");
       expect(markdown).toContain("- **Model:** claude-sonnet-4-6");
+      expect(markdown).toContain("- **Token usage:** input 100, cached 25, output 10, total 135");
+      expect(markdown).toContain("- **Token usage:** input 200, cached 50, output 20, total 270");
       expect(markdown).toContain("```diff");
       expect(markdown).toContain("## Author Follow-Up");
       expect(markdown).toContain(
@@ -196,6 +199,12 @@ function makeExecuteStep(): ExecutionStepResult {
     stdout: "",
     stderr: "",
     normalizedOutput: "{\"unified_diff\":\"diff --git a/a.ts b/a.ts\"}",
+    tokenUsage: {
+      inputTokens: 100,
+      cachedInputTokens: 25,
+      outputTokens: 10,
+      totalTokens: 135,
+    },
     parsedOutput: {
       unified_diff: "diff --git a/a.ts b/a.ts",
       files_affected: ["a.ts"],
@@ -234,6 +243,12 @@ function makeReviewStep(input?: {
     stdout: "",
     stderr: "",
     normalizedOutput: "{\"verdict\":\"approve\"}",
+    tokenUsage: {
+      inputTokens: 200,
+      cachedInputTokens: 50,
+      outputTokens: 20,
+      totalTokens: 270,
+    },
     parsedOutput: {
       verdict: "approve",
       severity: "low",

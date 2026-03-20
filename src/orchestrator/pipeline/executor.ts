@@ -33,6 +33,7 @@ export interface RunExecutionOptions {
   contextCwd: string;
   agentCwd: string;
   agentModels?: AgentModelConfig | undefined;
+  agentResumeSessions?: Partial<Record<AgentId, string>> | undefined;
   verbose?: boolean | undefined;
   repoSummary?: string | undefined;
   techStack?: string[] | undefined;
@@ -115,6 +116,7 @@ export async function executePipeline(
           prompt,
           cwd: input.options.agentCwd,
           model: resolvedAgentModels[step.agent],
+          resumeSessionId: input.options.agentResumeSessions?.[step.agent],
           verbose: input.options.verbose,
         });
 
@@ -139,6 +141,8 @@ export async function executePipeline(
           stdout: execution.stdout,
           stderr: execution.stderr,
           normalizedOutput: execution.normalizedOutput,
+          providerSessionId: execution.providerSessionId,
+          tokenUsage: execution.tokenUsage,
           parsedOutput: parsed.data,
           error:
             execution.exitCode !== 0

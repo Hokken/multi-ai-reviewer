@@ -122,21 +122,22 @@ Provide a table of relevant files with a short purpose description:
 
 ### PRIOR REPORTS
 
-If this investigation updates a previous one, list every prior report path:
+If this investigation is being updated after a review pass, list the single most recent Multi AI Reviewer report path under `.mrev/reports/`:
 
 ```md
 ## PRIOR REPORTS
 
-- docs/investigations/2026-03-08-initial-investigation.md
+- .mrev/reports/2026-03-08-first-pass.md
 ```
 
-Preserve existing entries and append new ones as later passes occur. Do not remove older reports unless clearly unrelated.
+This section is what `mrev review investigation` uses to preserve reviewer continuity on later validation passes. Replace older `.mrev/reports/...` entries with the newest prior report path instead of accumulating every historical report.
 
 If the artifact already contains a `PRIOR REPORTS` section:
 
 - preserve it
-- keep existing report paths
-- append any new prior-pass report paths that are now relevant
+- replace older `.mrev/reports/...` entries with the single most recent prior-pass report path
+
+If you need to reference earlier investigation artifacts for reader context, mention them elsewhere in the document. Do not use `PRIOR REPORTS` for predecessor investigation markdown files.
 
 ## FIXES APPLIED
 

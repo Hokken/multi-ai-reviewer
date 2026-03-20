@@ -84,6 +84,8 @@ function toSessionStepLog(step: ExecutionStepResult): SessionStepLog {
       truncated: step.context.truncated,
     },
     rawOutput: step.normalizedOutput || step.stdout || null,
+    providerSessionId: step.providerSessionId,
+    tokenUsage: step.tokenUsage,
     parsedOutput: step.parsedOutput,
     error: step.error,
   };

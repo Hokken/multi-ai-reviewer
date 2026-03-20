@@ -205,7 +205,7 @@ Do not put prior review artifact paths in `PRIOR REPORTS` unless they are actual
 
 If this is a validation pass, always include a `PRIOR REPORTS` section before `FIXES APPLIED`.
 
-List every prior generated Multi AI Reviewer report that should remain in reviewer context, using repo-relative paths under `.mrev/reports/`.
+List the most recent generated Multi AI Reviewer report that should remain in reviewer context, using a repo-relative path under `.mrev/reports/`.
 
 Example:
 
@@ -213,20 +213,18 @@ Example:
 ## PRIOR REPORTS
 
 - .mrev/reports/2026-03-08-first-pass.md
-- .mrev/reports/2026-03-09-second-pass.md
 ```
 
-Preserve existing entries and append new ones as later passes occur. Do not remove older reports unless they are clearly unrelated.
+Replace older entries with the newest prior report as later passes occur. Do not accumulate every historical report in this section for standard validation passes.
 
 If the artifact already contains a `PRIOR REPORTS` section:
 
 - preserve it
-- keep existing report paths
-- append any new prior-pass report paths that are now relevant
+- replace older `.mrev/reports/...` entries with the single most recent prior-pass report path
 
 If this is not the first pass and the artifact does not yet contain `PRIOR REPORTS`, create the section automatically.
 
-Treat this as required on later passes, not optional. Reviewers depend on these paths to retain context from their previous reports.
+Treat this as required on later passes, not optional. Reviewers depend on this path to retain context from the immediately previous report.
 
 ## FIXES APPLIED
 

@@ -58,7 +58,7 @@ mrev review docs/reviews/feature-review.md
 6. `mrev review` the implementation
 7. Fix issues — the author LLM updates `FIXES APPLIED` and `PRIOR REPORTS` in the artifact — then rerun until clean
 
-First-pass reviews are broad. Later passes focus on validating the fixes you claimed in `FIXES APPLIED` against what the prior reports actually found.
+First-pass reviews are broad. Later passes focus on validating the fixes you claimed in `FIXES APPLIED` against what the most recent prior report actually found. When the prior pass session log contains reusable Claude, Codex, or Gemini session IDs, mrev resumes those reviewer conversations automatically instead of rebuilding all prior context from scratch.
 
 ## Generating Review Artifacts
 
@@ -108,7 +108,7 @@ Each review run saves two files:
 
 The Markdown report is the one you read. The JSON is for tooling and audit.
 
-To chain validation passes, the author LLM adds the previous report path to the artifact under `PRIOR REPORTS`. mrev includes it in reviewer context on the next run.
+To chain validation passes, the author LLM adds the previous report path to the artifact under `PRIOR REPORTS`. mrev uses the most recent referenced report to recover prior-review context on the next run: it resumes saved Claude, Codex, and Gemini reviewer sessions when possible, and otherwise falls back to including that report in reviewer context.
 
 ## Install
 

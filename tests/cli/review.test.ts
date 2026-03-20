@@ -547,10 +547,13 @@ describe("review workflows", () => {
 
       expect(prepared.validationPass).toBe(true);
       expect(prepared.hasPriorReportContext).toBe(true);
-      expect(prepared.agentFiles).toEqual({});
+      expect(prepared.agentFiles).toEqual({
+        codex: [".mrev/reports/plan-pass-1.md"],
+        gemini: [".mrev/reports/plan-pass-1.md"],
+      });
+      expect(prepared.agentResumeSessions).toEqual({});
       expect(prepared.files).toEqual([
         "docs/plan.md",
-        ".mrev/reports/plan-pass-1.md",
       ]);
       expect(prepared.task).toContain("Validate the applied fixes in the implementation plan");
       expect(prepared.task).toContain("Start with the FIXES APPLIED section.");
@@ -594,10 +597,13 @@ describe("review workflows", () => {
 
       expect(prepared.validationPass).toBe(true);
       expect(prepared.hasPriorReportContext).toBe(true);
-      expect(prepared.agentFiles).toEqual({});
+      expect(prepared.agentFiles).toEqual({
+        codex: [".mrev/reports/investigation-pass-1.md"],
+        gemini: [".mrev/reports/investigation-pass-1.md"],
+      });
+      expect(prepared.agentResumeSessions).toEqual({});
       expect(prepared.files).toEqual([
         "investigation.md",
-        ".mrev/reports/investigation-pass-1.md",
       ]);
       expect(prepared.task).toContain("Validate the applied fixes in the investigation");
       expect(prepared.task).toContain("Start with the FIXES APPLIED section.");
@@ -663,7 +669,7 @@ describe("review workflows", () => {
     }
   });
 
-  it("includes all referenced prior review reports during validation passes", async () => {
+  it("includes only the most recent referenced prior review report during validation passes", async () => {
     const cwd = await mkdtemp(join(tmpdir(), "conductor-review-"));
     const originalCwd = process.cwd();
 
@@ -706,8 +712,9 @@ describe("review workflows", () => {
         files: [
           "docs/review.md",
           ".mrev/reports/pass-2.md",
-          ".mrev/reports/pass-1.md",
         ],
+        agentFiles: {},
+        agentResumeSessions: {},
         hasPriorReportContext: true,
         missingReferencedReports: [],
       });
@@ -753,8 +760,51 @@ describe("review workflows", () => {
       expect(context.files).toEqual([
         "docs/review.md",
         ".mrev/reports/pass-3.md",
-        ".mrev/reports/pass-2.md",
-        ".mrev/reports/pass-1.md",
+      ]);
+    } finally {
+      process.chdir(originalCwd);
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("caps validation-pass prior report context to the single most recent report", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "conductor-review-"));
+    const originalCwd = process.cwd();
+
+    try {
+      process.chdir(cwd);
+      await mkdir(join(cwd, "docs"), { recursive: true });
+      await mkdir(join(cwd, ".mrev", "reports"), { recursive: true });
+      await writeFile(
+        join(cwd, "docs", "review.md"),
+        [
+          "# Review Instructions",
+          "## FIXES APPLIED",
+          "#### Fix 1: Applied",
+          "",
+          "## PRIOR REPORTS",
+          "- .mrev/reports/pass-1.md",
+          "- .mrev/reports/pass-2.md",
+          "- .mrev/reports/pass-3.md",
+          "- .mrev/reports/pass-4.md",
+        ].join("\n"),
+        "utf8",
+      );
+      await writeFile(join(cwd, ".mrev", "reports", "pass-1.md"), "# First", "utf8");
+      await writeFile(join(cwd, ".mrev", "reports", "pass-2.md"), "# Second", "utf8");
+      await writeFile(join(cwd, ".mrev", "reports", "pass-3.md"), "# Third", "utf8");
+      await writeFile(join(cwd, ".mrev", "reports", "pass-4.md"), "# Fourth", "utf8");
+
+      const context = await resolveReviewWorkflowContext(
+        cwd,
+        "docs/review.md",
+        undefined,
+        true,
+      );
+
+      expect(context.files).toEqual([
+        "docs/review.md",
+        ".mrev/reports/pass-4.md",
       ]);
     } finally {
       process.chdir(originalCwd);
@@ -790,6 +840,8 @@ describe("review workflows", () => {
 
       expect(context).toEqual({
         files: ["docs/review.md"],
+        agentFiles: {},
+        agentResumeSessions: {},
         hasPriorReportContext: false,
         missingReferencedReports: [".mrev/reports/missing-report.md"],
       });
@@ -856,7 +908,11 @@ describe("review workflows", () => {
       expect(prepared).toMatchObject({
         kind: "implementation",
         pipeline: "review:claude | review:codex",
-        agentFiles: {},
+        agentFiles: {
+          claude: [".mrev/reports/second-pass.md"],
+          codex: [".mrev/reports/second-pass.md"],
+        },
+        agentResumeSessions: {},
         reviewers: ["claude", "codex"],
         validationPass: true,
         hasPriorReportContext: true,
@@ -870,9 +926,265 @@ describe("review workflows", () => {
       expect(prepared.task).toContain("Treat this as a validation pass");
       expect(prepared.files).toEqual([
         "docs/review.md",
-        ".mrev/reports/second-pass.md",
-        ".mrev/reports/first-pass.md",
       ]);
+    } finally {
+      process.chdir(originalCwd);
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("reuses reviewer sessions from the most recent referenced report when available", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "conductor-review-"));
+    const originalCwd = process.cwd();
+
+    try {
+      process.chdir(cwd);
+      await mkdir(join(cwd, "docs"), { recursive: true });
+      await mkdir(join(cwd, ".mrev", "reports"), { recursive: true });
+      await mkdir(join(cwd, ".mrev", "sessions"), { recursive: true });
+      await writeFile(
+        join(cwd, "docs", "review.md"),
+        [
+          "# Review Instructions",
+          "Author: claude",
+          "## Changed Files",
+          "## FIXES APPLIED",
+          "#### Fix 1: Applied",
+          "",
+          "Previous report: .mrev/reports/second-pass.md",
+        ].join("\n"),
+        "utf8",
+      );
+      await writeFile(
+        join(cwd, ".mrev", "reports", "second-pass.md"),
+        "# Second pass report",
+        "utf8",
+      );
+      await writeFile(
+        join(cwd, ".mrev", "sessions", "second-pass.json"),
+        JSON.stringify({
+          sessionId: "deadbeef",
+          timestamp: "2026-03-19T00:00:00.000Z",
+          durationMs: 1000,
+          request: {
+            task: "task",
+            pipeline: "review:claude | review:codex | review:gemini",
+            options: {},
+          },
+          steps: [
+            {
+              index: 1,
+              role: "review",
+              agent: "claude",
+              status: "completed",
+              startedAt: "2026-03-19T00:00:00.000Z",
+              completedAt: "2026-03-19T00:00:01.000Z",
+              durationMs: 1000,
+              promptSummary: {
+                taskLength: 1,
+                contextSources: ["--files"],
+                includedFiles: [],
+                truncated: false,
+              },
+              rawOutput: null,
+              providerSessionId: "11111111-1111-4111-8111-111111111111",
+              parsedOutput: {
+                verdict: "revise",
+              },
+              error: null,
+            },
+            {
+              index: 2,
+              role: "review",
+              agent: "codex",
+              status: "completed",
+              startedAt: "2026-03-19T00:00:00.000Z",
+              completedAt: "2026-03-19T00:00:01.000Z",
+              durationMs: 1000,
+              promptSummary: {
+                taskLength: 1,
+                contextSources: ["--files"],
+                includedFiles: [],
+                truncated: false,
+              },
+              rawOutput: null,
+              providerSessionId: "22222222-2222-4222-8222-222222222222",
+              parsedOutput: {
+                verdict: "revise",
+              },
+              error: null,
+            },
+            {
+              index: 3,
+              role: "review",
+              agent: "gemini",
+              status: "completed",
+              startedAt: "2026-03-19T00:00:00.000Z",
+              completedAt: "2026-03-19T00:00:01.000Z",
+              durationMs: 1000,
+              promptSummary: {
+                taskLength: 1,
+                contextSources: ["--files"],
+                includedFiles: [],
+                truncated: false,
+              },
+              rawOutput: null,
+              providerSessionId: "33333333-3333-4333-8333-333333333333",
+              parsedOutput: {
+                verdict: "revise",
+              },
+              error: null,
+            },
+          ],
+          consensus: null,
+          finalRecommendation: "revise",
+        }),
+        "utf8",
+      );
+
+      const prepared = await prepareImplementationReviewWorkflow(cwd, "docs/review.md", {
+        reviewers: ["claude", "codex", "gemini"],
+        reviewerModels: {
+          claude: "claude-sonnet-4-6",
+          codex: "gpt-5.2-codex",
+          gemini: "gemini-3.1-pro-preview",
+        },
+      });
+
+      expect(prepared.files).toEqual(["docs/review.md"]);
+      expect(prepared.agentResumeSessions).toEqual({
+        claude: "11111111-1111-4111-8111-111111111111",
+        codex: "22222222-2222-4222-8222-222222222222",
+        gemini: "33333333-3333-4333-8333-333333333333",
+      });
+      expect(prepared.agentFiles).toEqual({});
+    } finally {
+      process.chdir(originalCwd);
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("does not reuse provider sessions from failed or unparsed prior review steps", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "conductor-review-"));
+    const originalCwd = process.cwd();
+
+    try {
+      process.chdir(cwd);
+      await mkdir(join(cwd, "docs"), { recursive: true });
+      await mkdir(join(cwd, ".mrev", "reports"), { recursive: true });
+      await mkdir(join(cwd, ".mrev", "sessions"), { recursive: true });
+      await writeFile(
+        join(cwd, "docs", "review.md"),
+        [
+          "# Review Instructions",
+          "## Changed Files",
+          "## FIXES APPLIED",
+          "#### Fix 1: Applied",
+          "",
+          "Previous report: .mrev/reports/second-pass.md",
+        ].join("\n"),
+        "utf8",
+      );
+      await writeFile(
+        join(cwd, ".mrev", "reports", "second-pass.md"),
+        "# Second pass report",
+        "utf8",
+      );
+      await writeFile(
+        join(cwd, ".mrev", "sessions", "second-pass.json"),
+        JSON.stringify({
+          sessionId: "deadbeef",
+          timestamp: "2026-03-19T00:00:00.000Z",
+          durationMs: 1000,
+          request: {
+            task: "task",
+            pipeline: "review:claude | review:codex | review:gemini",
+            options: {},
+          },
+          steps: [
+            {
+              index: 1,
+              role: "review",
+              agent: "claude",
+              status: "failed",
+              startedAt: "2026-03-19T00:00:00.000Z",
+              completedAt: "2026-03-19T00:00:01.000Z",
+              durationMs: 1000,
+              promptSummary: {
+                taskLength: 1,
+                contextSources: ["--files"],
+                includedFiles: [],
+                truncated: false,
+              },
+              rawOutput: null,
+              providerSessionId: "11111111-1111-4111-8111-111111111111",
+              parsedOutput: null,
+              error: "Command exited with code 1",
+            },
+            {
+              index: 2,
+              role: "review",
+              agent: "codex",
+              status: "parse_failed",
+              startedAt: "2026-03-19T00:00:00.000Z",
+              completedAt: "2026-03-19T00:00:01.000Z",
+              durationMs: 1000,
+              promptSummary: {
+                taskLength: 1,
+                contextSources: ["--files"],
+                includedFiles: [],
+                truncated: false,
+              },
+              rawOutput: "{}",
+              providerSessionId: "22222222-2222-4222-8222-222222222222",
+              parsedOutput: null,
+              error: "invalid response",
+            },
+            {
+              index: 3,
+              role: "review",
+              agent: "gemini",
+              status: "completed",
+              startedAt: "2026-03-19T00:00:00.000Z",
+              completedAt: "2026-03-19T00:00:01.000Z",
+              durationMs: 1000,
+              promptSummary: {
+                taskLength: 1,
+                contextSources: ["--files"],
+                includedFiles: [],
+                truncated: false,
+              },
+              rawOutput: "{}",
+              providerSessionId: "33333333-3333-4333-8333-333333333333",
+              parsedOutput: {
+                verdict: "revise",
+              },
+              error: null,
+            },
+          ],
+          consensus: null,
+          finalRecommendation: "revise",
+        }),
+        "utf8",
+      );
+
+      const prepared = await prepareImplementationReviewWorkflow(cwd, "docs/review.md", {
+        reviewers: ["claude", "codex", "gemini"],
+        reviewerModels: {
+          claude: "claude-sonnet-4-6",
+          codex: "gpt-5.2-codex",
+          gemini: "gemini-3.1-pro-preview",
+        },
+      });
+
+      expect(prepared.files).toEqual(["docs/review.md"]);
+      expect(prepared.agentResumeSessions).toEqual({
+        gemini: "33333333-3333-4333-8333-333333333333",
+      });
+      expect(prepared.agentFiles).toEqual({
+        claude: [".mrev/reports/second-pass.md"],
+        codex: [".mrev/reports/second-pass.md"],
+      });
     } finally {
       process.chdir(originalCwd);
       await rm(cwd, { recursive: true, force: true });

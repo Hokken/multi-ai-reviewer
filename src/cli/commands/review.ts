@@ -3,7 +3,7 @@ import { access, readFile } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import { basename, relative, resolve } from "node:path";
 
-import type { AgentId } from "../../types/index.js";
+import type { AgentId, SessionLog } from "../../types/index.js";
 import { loadRepoProjectConfig } from "../../config/project.js";
 import { ensureWorkspace, getReportPathPattern, getReportPathScanner } from "../../config/storage.js";
 
@@ -48,6 +48,7 @@ const VALIDATION_PASS_SCOPING = [
   "Focus your effort on verifying the fixes claimed in the FIXES APPLIED section — do not repeat the full analysis from the first pass.",
   "A targeted, shorter review is expected here.",
 ].join(" ");
+const MAX_VALIDATION_PRIOR_REPORTS = 1;
 const FIXES_APPLIED_PLACEHOLDER_PATTERNS = [
   /^this section is intentionally empty on the first pass\.?$/i,
   /^none\.?$/i,
@@ -92,6 +93,7 @@ export interface PreparedReviewWorkflow {
   pipeline: string;
   files: string[];
   agentFiles: Partial<Record<AgentId, string[]>>;
+  agentResumeSessions: Partial<Record<AgentId, string>>;
   reviewers: AgentId[];
   validationPass: boolean;
   hasPriorReportContext: boolean;
@@ -152,6 +154,7 @@ export async function runInvestigationReviewCommand(
       pipeline: prepared.pipeline,
       files: prepared.files,
       agentFiles: prepared.agentFiles,
+      agentResumeSessions: prepared.agentResumeSessions,
       repoSummary: options.repoSummary,
       techStack: options.techStack,
       claudeModel: prepared.modelOverrides.claudeModel,
@@ -176,6 +179,7 @@ export async function runPlanReviewCommand(
       pipeline: prepared.pipeline,
       files: prepared.files,
       agentFiles: prepared.agentFiles,
+      agentResumeSessions: prepared.agentResumeSessions,
       repoSummary: options.repoSummary,
       techStack: options.techStack,
       claudeModel: prepared.modelOverrides.claudeModel,
@@ -209,6 +213,7 @@ export async function runImplementationReviewCommand(
       pipeline: prepared.pipeline,
       files: prepared.files,
       agentFiles: prepared.agentFiles,
+      agentResumeSessions: prepared.agentResumeSessions,
       diff: true,
       repoSummary: options.repoSummary,
       techStack: options.techStack,
@@ -263,10 +268,14 @@ export async function preparePlanReviewWorkflow(
   const workflowContext = await resolveReviewWorkflowContext(
     cwd,
     planFile,
+    reviewers,
     options.extraFiles,
     analysis.validationPass,
   );
-  const agentFiles = await resolveReviewAgentFiles(cwd, reviewers);
+  const agentFiles = mergeAgentFiles(
+    await resolveReviewAgentFiles(cwd, reviewers),
+    workflowContext.agentFiles,
+  );
 
   return {
     kind: "plan",
@@ -280,6 +289,7 @@ export async function preparePlanReviewWorkflow(
     pipeline: buildParallelReviewPipeline(reviewers),
     files: workflowContext.files,
     agentFiles,
+    agentResumeSessions: workflowContext.agentResumeSessions,
     reviewers,
     validationPass: analysis.validationPass,
     hasPriorReportContext: workflowContext.hasPriorReportContext,
@@ -303,10 +313,14 @@ export async function prepareInvestigationReviewWorkflow(
   const workflowContext = await resolveReviewWorkflowContext(
     cwd,
     investigationFile,
+    reviewers,
     options.extraFiles,
     analysis.validationPass,
   );
-  const agentFiles = await resolveReviewAgentFiles(cwd, reviewers);
+  const agentFiles = mergeAgentFiles(
+    await resolveReviewAgentFiles(cwd, reviewers),
+    workflowContext.agentFiles,
+  );
 
   return {
     kind: "investigation",
@@ -320,6 +334,7 @@ export async function prepareInvestigationReviewWorkflow(
     pipeline: buildParallelReviewPipeline(reviewers),
     files: workflowContext.files,
     agentFiles,
+    agentResumeSessions: workflowContext.agentResumeSessions,
     reviewers,
     validationPass: analysis.validationPass,
     hasPriorReportContext: workflowContext.hasPriorReportContext,
@@ -343,10 +358,14 @@ export async function prepareImplementationReviewWorkflow(
   const workflowContext = await resolveReviewWorkflowContext(
     cwd,
     instructionsFile,
+    reviewers,
     options.extraFiles,
     analysis.validationPass,
   );
-  const agentFiles = await resolveReviewAgentFiles(cwd, reviewers);
+  const agentFiles = mergeAgentFiles(
+    await resolveReviewAgentFiles(cwd, reviewers),
+    workflowContext.agentFiles,
+  );
 
   return {
     kind: "implementation",
@@ -360,6 +379,7 @@ export async function prepareImplementationReviewWorkflow(
     pipeline: buildParallelReviewPipeline(reviewers),
     files: workflowContext.files,
     agentFiles,
+    agentResumeSessions: workflowContext.agentResumeSessions,
     reviewers,
     validationPass: analysis.validationPass,
     hasPriorReportContext: workflowContext.hasPriorReportContext,
@@ -528,16 +548,31 @@ export function coerceAutoReviewWorkflowOptions(input: {
 export async function resolveReviewWorkflowFiles(
   cwd: string,
   primaryFile: string,
-  extraFiles?: string[] | undefined,
+  reviewersOrExtraFiles?: AgentId[] | string[] | undefined,
+  extraFilesOrInput?: string[] | {
+    validationPass?: boolean | undefined;
+    reviewers?: AgentId[] | undefined;
+  } | undefined,
   input?: {
     validationPass?: boolean | undefined;
+    reviewers?: AgentId[] | undefined;
   } | undefined,
 ): Promise<string[]> {
+  const {
+    reviewers,
+    extraFiles,
+    options,
+  } = normalizeReviewWorkflowContextArguments(
+    reviewersOrExtraFiles,
+    extraFilesOrInput,
+    input,
+  );
   const workflowContext = await resolveReviewWorkflowContext(
     cwd,
     primaryFile,
+    reviewers,
     extraFiles,
-    input?.validationPass ?? false,
+    options.validationPass ?? false,
   );
   return workflowContext.files;
 }
@@ -545,13 +580,25 @@ export async function resolveReviewWorkflowFiles(
 export async function resolveReviewWorkflowContext(
   cwd: string,
   primaryFile: string,
-  extraFiles?: string[] | undefined,
-  validationPass = false,
+  reviewersOrExtraFiles?: AgentId[] | string[] | undefined,
+  extraFilesOrValidationPass?: string[] | boolean | undefined,
+  validationPassOrUndefined = false,
 ): Promise<{
   files: string[];
+  agentFiles: Partial<Record<AgentId, string[]>>;
+  agentResumeSessions: Partial<Record<AgentId, string>>;
   hasPriorReportContext: boolean;
   missingReferencedReports: string[];
 }> {
+  const {
+    reviewers,
+    extraFiles,
+    validationPass,
+  } = normalizeReviewWorkflowContextArgs(
+    reviewersOrExtraFiles,
+    extraFilesOrValidationPass,
+    validationPassOrUndefined,
+  );
   const referencedReports = validationPass
     ? await resolveReferencedValidationReports(cwd, primaryFile)
     : {
@@ -559,18 +606,95 @@ export async function resolveReviewWorkflowContext(
       missing: [],
     };
   const prioritizedReports = validationPass
-    ? [...referencedReports.found].reverse()
+    ? [...referencedReports.found].reverse().slice(0, MAX_VALIDATION_PRIOR_REPORTS)
     : referencedReports.found;
+  const requestedReviewers = Array.from(new Set(reviewers));
+  const agentResumeSessions = validationPass
+    ? await resolveValidationAgentResumeSessions(cwd, prioritizedReports)
+    : {};
+  const useLegacySharedPriorReports = requestedReviewers.length === 0;
+  const agentFiles = validationPass && !useLegacySharedPriorReports
+    ? buildValidationAgentFiles(prioritizedReports, requestedReviewers, agentResumeSessions)
+    : {};
   const combined = [
     primaryFile,
-    ...prioritizedReports,
+    ...(useLegacySharedPriorReports ? prioritizedReports : []),
     ...(extraFiles ?? []),
   ];
   return {
     files: Array.from(new Set(combined)),
+    agentFiles,
+    agentResumeSessions,
     hasPriorReportContext: referencedReports.found.length > 0,
     missingReferencedReports: referencedReports.missing,
   };
+}
+
+function normalizeReviewWorkflowContextArguments(
+  reviewersOrExtraFiles?: AgentId[] | string[] | undefined,
+  extraFilesOrInput?: string[] | {
+    validationPass?: boolean | undefined;
+    reviewers?: AgentId[] | undefined;
+  } | undefined,
+  input?: {
+    validationPass?: boolean | undefined;
+    reviewers?: AgentId[] | undefined;
+  } | undefined,
+): {
+  reviewers: AgentId[];
+  extraFiles?: string[] | undefined;
+  options: {
+    validationPass?: boolean | undefined;
+  };
+} {
+  const reviewers = resolveReviewerArgument(
+    reviewersOrExtraFiles,
+    input?.reviewers ?? (Array.isArray(extraFilesOrInput) ? undefined : extraFilesOrInput?.reviewers),
+  );
+  const extraFiles = isReviewerList(reviewersOrExtraFiles)
+    ? (Array.isArray(extraFilesOrInput) ? extraFilesOrInput : undefined)
+    : reviewersOrExtraFiles;
+
+  return {
+    reviewers,
+    extraFiles,
+    options: {
+      validationPass: input?.validationPass ?? (Array.isArray(extraFilesOrInput) ? undefined : extraFilesOrInput?.validationPass),
+    },
+  };
+}
+
+function normalizeReviewWorkflowContextArgs(
+  reviewersOrExtraFiles?: AgentId[] | string[] | undefined,
+  extraFilesOrValidationPass?: string[] | boolean | undefined,
+  validationPass = false,
+): {
+  reviewers: AgentId[];
+  extraFiles?: string[] | undefined;
+  validationPass: boolean;
+} {
+  return {
+    reviewers: resolveReviewerArgument(
+      isReviewerList(reviewersOrExtraFiles) ? reviewersOrExtraFiles : undefined,
+    ),
+    extraFiles: isReviewerList(reviewersOrExtraFiles) ? (Array.isArray(extraFilesOrValidationPass) ? extraFilesOrValidationPass : undefined) : reviewersOrExtraFiles,
+    validationPass: typeof extraFilesOrValidationPass === "boolean" ? extraFilesOrValidationPass : validationPass,
+  };
+}
+
+function resolveReviewerArgument(
+  primary?: AgentId[] | string[] | undefined,
+  fallback?: AgentId[] | undefined,
+): AgentId[] {
+  if (isReviewerList(primary)) {
+    return primary;
+  }
+
+  return fallback ?? [];
+}
+
+function isReviewerList(value?: AgentId[] | string[] | undefined): value is AgentId[] {
+  return Array.isArray(value) && value.every((entry) => ALL_AGENTS.includes(entry as AgentId));
 }
 
 export async function analyzeReviewFile(
@@ -785,6 +909,49 @@ export async function resolveReviewAgentFiles(
   return resolved;
 }
 
+function mergeAgentFiles(
+  left: Partial<Record<AgentId, string[]>>,
+  right: Partial<Record<AgentId, string[]>>,
+): Partial<Record<AgentId, string[]>> {
+  const merged: Partial<Record<AgentId, string[]>> = {};
+
+  for (const agent of ALL_AGENTS) {
+    const combined = [
+      ...(left[agent] ?? []),
+      ...(right[agent] ?? []),
+    ];
+    if (combined.length > 0) {
+      merged[agent] = Array.from(new Set(combined));
+    }
+  }
+
+  return merged;
+}
+
+function buildValidationAgentFiles(
+  reportFiles: string[],
+  reviewers: AgentId[],
+  agentResumeSessions: Partial<Record<AgentId, string>>,
+): Partial<Record<AgentId, string[]>> {
+  const resolved: Partial<Record<AgentId, string[]>> = {};
+
+  for (const reviewer of reviewers) {
+    if (supportsResumedReviewSessions(reviewer) && agentResumeSessions[reviewer]) {
+      continue;
+    }
+
+    if (reportFiles.length > 0) {
+      resolved[reviewer] = reportFiles;
+    }
+  }
+
+  return resolved;
+}
+
+function supportsResumedReviewSessions(agent: AgentId): boolean {
+  return agent === "claude" || agent === "codex" || agent === "gemini";
+}
+
 async function findRepoInstructionFileForAgent(
   cwd: string,
   agent: AgentId,
@@ -829,6 +996,55 @@ async function resolveReferencedValidationReports(
     found,
     missing,
   };
+}
+
+async function resolveValidationAgentResumeSessions(
+  cwd: string,
+  reportPaths: string[],
+): Promise<Partial<Record<AgentId, string>>> {
+  const resolved: Partial<Record<AgentId, string>> = {};
+
+  for (const reportPath of reportPaths) {
+    const session = await readSessionLogForReport(cwd, reportPath);
+    if (!session) {
+      continue;
+    }
+
+    for (const step of session.steps) {
+      if (
+        step.status !== "completed"
+        || step.parsedOutput === null
+        || step.parsedOutput === undefined
+        || step.role !== "review"
+        || !supportsResumedReviewSessions(step.agent)
+        || typeof step.providerSessionId !== "string"
+        || step.providerSessionId.trim().length === 0
+      ) {
+        continue;
+      }
+
+      resolved[step.agent] = step.providerSessionId;
+    }
+  }
+
+  return resolved;
+}
+
+async function readSessionLogForReport(
+  cwd: string,
+  reportPath: string,
+): Promise<SessionLog | null> {
+  const absoluteReportPath = resolve(cwd, reportPath);
+  const absoluteSessionPath = absoluteReportPath
+    .replace(/([\\/])reports([\\/])/i, "$1sessions$2")
+    .replace(/\.md$/i, ".json");
+
+  try {
+    const content = await readFile(absoluteSessionPath, "utf8");
+    return JSON.parse(content) as SessionLog;
+  } catch {
+    return null;
+  }
 }
 
 async function readReviewFile(reviewFile: string, cwd: string): Promise<string> {
@@ -950,6 +1166,7 @@ function buildRunOptions(input: {
   pipeline: string;
   files: string[];
   agentFiles?: Partial<Record<AgentId, string[]>> | undefined;
+  agentResumeSessions?: Partial<Record<AgentId, string>> | undefined;
   diff?: boolean | undefined;
   repoSummary?: string | undefined;
   techStack?: string[] | undefined;
@@ -966,6 +1183,7 @@ function buildRunOptions(input: {
     pipeline: input.pipeline,
     files: input.files,
     ...(input.agentFiles ? { agentFiles: input.agentFiles } : {}),
+    ...(input.agentResumeSessions ? { agentResumeSessions: input.agentResumeSessions } : {}),
     reportOnly: true,
     ...(input.interactiveProgress !== undefined
       ? { interactiveProgress: input.interactiveProgress }

@@ -40,6 +40,16 @@ export interface PriorStepOutput {
   content: string;
 }
 
+export interface TokenUsage {
+  inputTokens?: number | undefined;
+  outputTokens?: number | undefined;
+  cachedInputTokens?: number | undefined;
+  cacheCreationInputTokens?: number | undefined;
+  thoughtTokens?: number | undefined;
+  toolTokens?: number | undefined;
+  totalTokens?: number | undefined;
+}
+
 export interface ExecutionStepResult {
   stepIndex: number;
   role: RoleId;
@@ -54,6 +64,8 @@ export interface ExecutionStepResult {
   stdout: string;
   stderr: string;
   normalizedOutput: string;
+  providerSessionId?: string | undefined;
+  tokenUsage?: TokenUsage | undefined;
   parsedOutput: StepOutput | null;
   error: string | null;
 }
@@ -131,6 +143,8 @@ export interface SessionStepLog {
     truncated: boolean;
   };
   rawOutput: string | null;
+  providerSessionId?: string | undefined;
+  tokenUsage?: TokenUsage | undefined;
   parsedOutput: unknown | null;
   error: string | null;
 }

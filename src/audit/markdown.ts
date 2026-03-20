@@ -7,6 +7,7 @@ export function renderSessionMarkdown(log: SessionLog): string {
   const reviewFindings = collectReviewFindings(log);
   const reviewerModels = collectReviewerModels(log);
   const priorReviewReports = collectPriorReviewReports(log);
+  const reviewTokenUsage = collectReviewTokenUsage(log);
   const reviewArtifact = resolveReviewArtifact(log);
   const lines: string[] = [
     "# Multi AI Reviewer Report",
@@ -46,6 +47,9 @@ export function renderSessionMarkdown(log: SessionLog): string {
   }
   if (reviewerModels.length > 0) {
     lines.push(`- **Reviewer models:** ${reviewerModels.join(", ")}`);
+  }
+  if (reviewTokenUsage) {
+    lines.push(`- **Review tokens:** ${formatTokenUsage(reviewTokenUsage)}`);
   }
   if (priorReviewReports.length > 0) {
     lines.push(`- **Validation history:** ${priorReviewReports.length} prior report(s) included`);
@@ -111,6 +115,9 @@ export function renderSessionMarkdown(log: SessionLog): string {
     }
     if (step.promptSummary.truncated) {
       lines.push("- **Context truncated:** yes");
+    }
+    if (step.tokenUsage) {
+      lines.push(`- **Token usage:** ${formatTokenUsage(step.tokenUsage)}`);
     }
     if (step.error) {
       lines.push(`- **Error:** ${step.error}`);
@@ -402,6 +409,78 @@ function highestSeverity(
   return findings.reduce<"low" | "medium" | "high" | "critical">((current, finding) => {
     return order[finding.severity] > order[current] ? finding.severity : current;
   }, "low");
+}
+
+function collectReviewTokenUsage(log: SessionLog): SessionLog["steps"][number]["tokenUsage"] | undefined {
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let cachedInputTokens = 0;
+  let cacheCreationInputTokens = 0;
+  let thoughtTokens = 0;
+  let toolTokens = 0;
+  let totalTokens = 0;
+  let hasAny = false;
+
+  for (const step of log.steps) {
+    if (step.role !== "review" || !step.tokenUsage) {
+      continue;
+    }
+
+    hasAny = true;
+    inputTokens += step.tokenUsage.inputTokens ?? 0;
+    outputTokens += step.tokenUsage.outputTokens ?? 0;
+    cachedInputTokens += step.tokenUsage.cachedInputTokens ?? 0;
+    cacheCreationInputTokens += step.tokenUsage.cacheCreationInputTokens ?? 0;
+    thoughtTokens += step.tokenUsage.thoughtTokens ?? 0;
+    toolTokens += step.tokenUsage.toolTokens ?? 0;
+    totalTokens += step.tokenUsage.totalTokens ?? 0;
+  }
+
+  if (!hasAny) {
+    return undefined;
+  }
+
+  return {
+    inputTokens: inputTokens > 0 ? inputTokens : undefined,
+    outputTokens: outputTokens > 0 ? outputTokens : undefined,
+    cachedInputTokens: cachedInputTokens > 0 ? cachedInputTokens : undefined,
+    cacheCreationInputTokens: cacheCreationInputTokens > 0 ? cacheCreationInputTokens : undefined,
+    thoughtTokens: thoughtTokens > 0 ? thoughtTokens : undefined,
+    toolTokens: toolTokens > 0 ? toolTokens : undefined,
+    totalTokens: totalTokens > 0 ? totalTokens : undefined,
+  };
+}
+
+function formatTokenUsage(tokenUsage: NonNullable<SessionLog["steps"][number]["tokenUsage"]>): string {
+  const parts: string[] = [];
+
+  if (tokenUsage.inputTokens !== undefined) {
+    parts.push(`input ${formatInteger(tokenUsage.inputTokens)}`);
+  }
+  if (tokenUsage.cachedInputTokens !== undefined) {
+    parts.push(`cached ${formatInteger(tokenUsage.cachedInputTokens)}`);
+  }
+  if (tokenUsage.cacheCreationInputTokens !== undefined) {
+    parts.push(`cache create ${formatInteger(tokenUsage.cacheCreationInputTokens)}`);
+  }
+  if (tokenUsage.outputTokens !== undefined) {
+    parts.push(`output ${formatInteger(tokenUsage.outputTokens)}`);
+  }
+  if (tokenUsage.thoughtTokens !== undefined) {
+    parts.push(`thoughts ${formatInteger(tokenUsage.thoughtTokens)}`);
+  }
+  if (tokenUsage.toolTokens !== undefined) {
+    parts.push(`tool ${formatInteger(tokenUsage.toolTokens)}`);
+  }
+  if (tokenUsage.totalTokens !== undefined) {
+    parts.push(`total ${formatInteger(tokenUsage.totalTokens)}`);
+  }
+
+  return parts.join(", ");
+}
+
+function formatInteger(value: number): string {
+  return value.toLocaleString("en-US");
 }
 
 function formatIssueLocation(file: string | null, line: number | null): string {

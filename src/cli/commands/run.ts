@@ -32,6 +32,7 @@ export interface RunCommandOptions {
   techStack?: string[];
   files?: string[];
   agentFiles?: Partial<Record<AgentId, string[]>> | undefined;
+  agentResumeSessions?: Partial<Record<AgentId, string>> | undefined;
   diff?: boolean;
   symbol?: string;
   verbose?: boolean;
@@ -162,6 +163,7 @@ async function runActualPipeline(
         techStack: options.techStack,
         files: options.files,
         agentFiles: options.agentFiles,
+        agentResumeSessions: options.agentResumeSessions,
         diff: options.diff,
         symbol: options.symbol,
         geminiStrict: options.geminiStrict,
