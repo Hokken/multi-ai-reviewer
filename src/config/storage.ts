@@ -7,6 +7,7 @@ export const LEGACY_APP_STORAGE_DIR = ".conductor";
 export const CONFIG_FILENAME = "config.yaml";
 export const REPORTS_DIRNAME = "reports";
 export const SESSIONS_DIRNAME = "sessions";
+export const REVIEW_CHAINS_DIRNAME = "chains";
 export const MREV_CONFIG_ENV = "MREV_CONFIG";
 export const LEGACY_CONFIG_ENV = "AI_CONDUCTOR_CONFIG";
 
@@ -64,12 +65,20 @@ export function getSessionsDir(cwd: string): string {
   return join(getPreferredStorageDir(cwd), SESSIONS_DIRNAME);
 }
 
+export function getReviewChainsDir(cwd: string): string {
+  return join(getPreferredStorageDir(cwd), REVIEW_CHAINS_DIRNAME);
+}
+
 export function resolveExistingReportsDir(cwd: string): string {
   return join(resolveExistingStorageDir(cwd), REPORTS_DIRNAME);
 }
 
 export function resolveExistingSessionsDir(cwd: string): string {
   return join(resolveExistingStorageDir(cwd), SESSIONS_DIRNAME);
+}
+
+export function resolveExistingReviewChainsDir(cwd: string): string {
+  return join(resolveExistingStorageDir(cwd), REVIEW_CHAINS_DIRNAME);
 }
 
 export function getConfigEnvOverride(): string | undefined {
@@ -127,10 +136,12 @@ export async function ensureWorkspace(cwd: string): Promise<void> {
   const storageDir = getPreferredStorageDir(cwd);
   const reportsDir = join(storageDir, REPORTS_DIRNAME);
   const sessionsDir = join(storageDir, SESSIONS_DIRNAME);
+  const reviewChainsDir = join(storageDir, REVIEW_CHAINS_DIRNAME);
   const configPath = join(storageDir, CONFIG_FILENAME);
 
   await mkdir(reportsDir, { recursive: true });
   await mkdir(sessionsDir, { recursive: true });
+  await mkdir(reviewChainsDir, { recursive: true });
 
   try {
     await writeFile(configPath, BASE_CONFIG_YAML, { flag: "wx" });

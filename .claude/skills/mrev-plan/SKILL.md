@@ -43,7 +43,7 @@ If the target file already exists:
 - update it in place
 - preserve useful existing content
 - refresh sections that are stale
-- preserve `PRIOR REPORTS`
+- preserve `PRIOR REPORTS` only when the artifact already uses it for fallback/history
 - append or update `FIXES APPLIED` instead of creating a duplicate artifact
 
 ## Goal
@@ -69,12 +69,12 @@ The reviewer should be able to understand:
 
 ## Planning Process
 
-1. Read the relevant request, investigation, code, config, and prior reports
+1. Read the relevant request, investigation, code, config, and any prior reports or related artifacts that are actually present
 2. Define the outcome, scope boundaries, assumptions, and non-goals
 3. Trace the affected architecture and identify dependencies or rollout constraints
 4. Break the work into concrete phases and milestones in the safest order
 5. Define validation steps, automated coverage, and manual checks
-6. Document prior report continuity in `PRIOR REPORTS` and `FIXES APPLIED`
+6. Document applied fixes in `FIXES APPLIED`, and update `PRIOR REPORTS` only when explicit fallback/history should remain in the artifact
 
 ## Required Structure
 
@@ -236,9 +236,9 @@ Provide a table of repo-relative files with a short purpose description. Include
 
 ### PRIOR REPORTS
 
-If this is a validation pass, always include `PRIOR REPORTS` before `FIXES APPLIED`.
+If this is a validation pass, `PRIOR REPORTS` is optional. Include it only when you want explicit fallback/history in the artifact.
 
-List the most recent prior Multi AI Reviewer report that should stay in reviewer context, using a repo-relative path under `.mrev/reports/`.
+If you include it, list only the most recent prior Multi AI Reviewer report, using a repo-relative path under `.mrev/reports/`.
 
 Example:
 
@@ -265,7 +265,7 @@ On the first pass, use this exact form:
 This section is intentionally empty on the first pass.
 ```
 
-On later passes, populate it so reviewers can validate the claimed fixes against the plan and the most recent prior report.
+On later passes, populate `FIXES APPLIED` so reviewers can validate the claimed fixes against the plan. `PRIOR REPORTS` is optional fallback/history, not required for machine continuity.
 
 For each fix, use this format:
 
@@ -285,7 +285,7 @@ If a suggestion was intentionally not implemented, keep it in this section with:
 - `Status: not fixed`
 - a short rationale
 
-Make sure `PRIOR REPORTS` and `FIXES APPLIED` stay consistent with each other on later passes.
+If `PRIOR REPORTS` is present, make sure it and `FIXES APPLIED` stay consistent with each other on later passes.
 
 ## Writing Guidelines
 

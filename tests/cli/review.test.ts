@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { SessionLog } from "../../src/types/index.js";
 
 import {
   analyzeReviewFile,
@@ -24,6 +25,48 @@ import {
   resolveReviewWorkflowFiles,
   resolveReviewers,
 } from "../../src/cli/commands/review.js";
+import { writeReviewChainRecord } from "../../src/audit/review-chains.js";
+
+function buildSessionLog(
+  providerSessions: Partial<Record<"claude" | "codex" | "gemini", string>>,
+): SessionLog {
+  const steps = (Object.entries(providerSessions) as Array<["claude" | "codex" | "gemini", string]>)
+    .map(([agent, providerSessionId], index) => ({
+      index: index + 1,
+      role: "review" as const,
+      agent,
+      status: "completed" as const,
+      startedAt: "2026-03-19T00:00:00.000Z",
+      completedAt: "2026-03-19T00:00:01.000Z",
+      durationMs: 1000,
+      promptSummary: {
+        taskLength: 1,
+        contextSources: ["--files"],
+        includedFiles: [],
+        truncated: false,
+      },
+      rawOutput: "{}",
+      providerSessionId,
+      parsedOutput: {
+        verdict: "revise",
+      },
+      error: null,
+    }));
+
+  return {
+    sessionId: "deadbeef",
+    timestamp: "2026-03-19T00:00:00.000Z",
+    durationMs: 1000,
+    request: {
+      task: "task",
+      pipeline: "review:claude | review:codex | review:gemini",
+      options: {},
+    },
+    steps,
+    consensus: null,
+    finalRecommendation: "revise",
+  };
+}
 
 describe("review workflows", () => {
   it("uses all reviewer providers by default", () => {
@@ -148,6 +191,20 @@ describe("review workflows", () => {
 
     expect(task).toContain("One or more prior review reports are also included in context.");
     expect(task).toContain("preserve reviewer context across passes");
+  });
+
+  it("mentions resumed reviewer context in validation tasks when present", () => {
+    const task = buildImplementationReviewTask(
+      "review-instructions.md",
+      "claude",
+      undefined,
+      true,
+      false,
+      true,
+    );
+
+    expect(task).toContain("reviewer sessions were resumed from saved validation state");
+    expect(task).toContain("preserved conversation context");
   });
 
   it("builds implementation validation task wording", () => {
@@ -418,6 +475,7 @@ describe("review workflows", () => {
         reviewers: ["codex", "gemini"],
         validationPass: false,
         hasPriorReportContext: false,
+        hasResumedReviewerContext: false,
         missingReferencedReports: [],
         modelOverrides: {
           codexModel: "gpt-5.2-codex",
@@ -464,6 +522,7 @@ describe("review workflows", () => {
         reviewers: ["codex", "gemini"],
         validationPass: false,
         hasPriorReportContext: false,
+        hasResumedReviewerContext: false,
         missingReferencedReports: [],
         modelOverrides: {
           codexModel: "gpt-5.2-codex",
@@ -547,6 +606,7 @@ describe("review workflows", () => {
 
       expect(prepared.validationPass).toBe(true);
       expect(prepared.hasPriorReportContext).toBe(true);
+      expect(prepared.hasResumedReviewerContext).toBe(false);
       expect(prepared.agentFiles).toEqual({
         codex: [".mrev/reports/plan-pass-1.md"],
         gemini: [".mrev/reports/plan-pass-1.md"],
@@ -597,6 +657,7 @@ describe("review workflows", () => {
 
       expect(prepared.validationPass).toBe(true);
       expect(prepared.hasPriorReportContext).toBe(true);
+      expect(prepared.hasResumedReviewerContext).toBe(false);
       expect(prepared.agentFiles).toEqual({
         codex: [".mrev/reports/investigation-pass-1.md"],
         gemini: [".mrev/reports/investigation-pass-1.md"],
@@ -655,9 +716,15 @@ describe("review workflows", () => {
         "utf8",
       );
 
-      const files = await resolveReviewWorkflowFiles(cwd, "docs/review.md", undefined, {
-        validationPass: true,
-      });
+      const files = await resolveReviewWorkflowFiles(
+        cwd,
+        "docs/review.md",
+        undefined,
+        undefined,
+        {
+          validationPass: true,
+        },
+      );
 
       expect(files).toEqual([
         "docs/review.md",
@@ -705,6 +772,7 @@ describe("review workflows", () => {
         cwd,
         "docs/review.md",
         undefined,
+        undefined,
         true,
       );
 
@@ -716,6 +784,7 @@ describe("review workflows", () => {
         agentFiles: {},
         agentResumeSessions: {},
         hasPriorReportContext: true,
+        hasResumedReviewerContext: false,
         missingReferencedReports: [],
       });
     } finally {
@@ -753,6 +822,7 @@ describe("review workflows", () => {
       const context = await resolveReviewWorkflowContext(
         cwd,
         "docs/review.md",
+        undefined,
         undefined,
         true,
       );
@@ -799,6 +869,7 @@ describe("review workflows", () => {
         cwd,
         "docs/review.md",
         undefined,
+        undefined,
         true,
       );
 
@@ -835,6 +906,7 @@ describe("review workflows", () => {
         cwd,
         "docs/review.md",
         undefined,
+        undefined,
         true,
       );
 
@@ -843,6 +915,7 @@ describe("review workflows", () => {
         agentFiles: {},
         agentResumeSessions: {},
         hasPriorReportContext: false,
+        hasResumedReviewerContext: false,
         missingReferencedReports: [".mrev/reports/missing-report.md"],
       });
     } finally {
@@ -916,6 +989,7 @@ describe("review workflows", () => {
         reviewers: ["claude", "codex"],
         validationPass: true,
         hasPriorReportContext: true,
+        hasResumedReviewerContext: false,
         missingReferencedReports: [],
         modelOverrides: {
           claudeModel: "claude-sonnet-4-6",
@@ -927,6 +1001,126 @@ describe("review workflows", () => {
       expect(prepared.files).toEqual([
         "docs/review.md",
       ]);
+    } finally {
+      process.chdir(originalCwd);
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("reuses reviewer sessions from the saved review chain without PRIOR REPORTS", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "conductor-review-"));
+    const originalCwd = process.cwd();
+
+    try {
+      process.chdir(cwd);
+      await mkdir(join(cwd, "docs"), { recursive: true });
+      await writeFile(
+        join(cwd, "docs", "review.md"),
+        [
+          "# Review Instructions",
+          "Author: claude",
+          "## Changed Files",
+          "## FIXES APPLIED",
+          "#### Fix 1: Applied",
+        ].join("\n"),
+        "utf8",
+      );
+      await writeReviewChainRecord({
+        cwd,
+        kind: "implementation",
+        artifactPath: "docs/review.md",
+        reportPath: join(cwd, ".mrev", "reports", "pass-1.md"),
+        sessionLogPath: join(cwd, ".mrev", "sessions", "pass-1.json"),
+        sessionLog: buildSessionLog({
+          claude: "11111111-1111-4111-8111-111111111111",
+          codex: "22222222-2222-4222-8222-222222222222",
+          gemini: "33333333-3333-4333-8333-333333333333",
+        }),
+      });
+
+      const prepared = await prepareImplementationReviewWorkflow(cwd, "docs/review.md", {
+        reviewers: ["claude", "codex", "gemini"],
+        reviewerModels: {
+          claude: "claude-sonnet-4-6",
+          codex: "gpt-5.2-codex",
+          gemini: "gemini-3.1-pro-preview",
+        },
+      });
+
+      expect(prepared.files).toEqual(["docs/review.md"]);
+      expect(prepared.hasPriorReportContext).toBe(false);
+      expect(prepared.hasResumedReviewerContext).toBe(true);
+      expect(prepared.agentResumeSessions).toEqual({
+        claude: "11111111-1111-4111-8111-111111111111",
+        codex: "22222222-2222-4222-8222-222222222222",
+        gemini: "33333333-3333-4333-8333-333333333333",
+      });
+      expect(prepared.agentFiles).toEqual({});
+      expect(prepared.task).toContain("reviewer sessions were resumed from saved validation state");
+      expect(prepared.task).not.toContain("prior review reports are also included in context");
+    } finally {
+      process.chdir(originalCwd);
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("uses prior report files only for reviewers missing chain-based resume state", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "conductor-review-"));
+    const originalCwd = process.cwd();
+
+    try {
+      process.chdir(cwd);
+      await mkdir(join(cwd, "docs"), { recursive: true });
+      await mkdir(join(cwd, ".mrev", "reports"), { recursive: true });
+      await mkdir(join(cwd, ".mrev", "sessions"), { recursive: true });
+      await writeFile(
+        join(cwd, "docs", "review.md"),
+        [
+          "# Review Instructions",
+          "## Changed Files",
+          "## FIXES APPLIED",
+          "#### Fix 1: Applied",
+          "",
+          "Previous report: .mrev/reports/pass-1.md",
+        ].join("\n"),
+        "utf8",
+      );
+      await writeFile(join(cwd, ".mrev", "reports", "pass-1.md"), "# First pass report", "utf8");
+      await writeFile(
+        join(cwd, ".mrev", "sessions", "pass-1.json"),
+        JSON.stringify(buildSessionLog({
+          codex: "22222222-2222-4222-8222-222222222222",
+          gemini: "33333333-3333-4333-8333-333333333333",
+        })),
+        "utf8",
+      );
+      await writeReviewChainRecord({
+        cwd,
+        kind: "implementation",
+        artifactPath: "docs/review.md",
+        reportPath: join(cwd, ".mrev", "reports", "pass-0.md"),
+        sessionLogPath: join(cwd, ".mrev", "sessions", "pass-0.json"),
+        sessionLog: buildSessionLog({
+          claude: "11111111-1111-4111-8111-111111111111",
+        }),
+      });
+
+      const prepared = await prepareImplementationReviewWorkflow(cwd, "docs/review.md", {
+        reviewers: ["claude", "codex", "gemini"],
+        reviewerModels: {
+          claude: "claude-sonnet-4-6",
+          codex: "gpt-5.2-codex",
+          gemini: "gemini-3.1-pro-preview",
+        },
+      });
+
+      expect(prepared.files).toEqual(["docs/review.md"]);
+      expect(prepared.agentResumeSessions).toEqual({
+        claude: "11111111-1111-4111-8111-111111111111",
+        codex: "22222222-2222-4222-8222-222222222222",
+        gemini: "33333333-3333-4333-8333-333333333333",
+      });
+      expect(prepared.agentFiles).toEqual({});
     } finally {
       process.chdir(originalCwd);
       await rm(cwd, { recursive: true, force: true });
@@ -1052,6 +1246,7 @@ describe("review workflows", () => {
       });
 
       expect(prepared.files).toEqual(["docs/review.md"]);
+      expect(prepared.hasResumedReviewerContext).toBe(true);
       expect(prepared.agentResumeSessions).toEqual({
         claude: "11111111-1111-4111-8111-111111111111",
         codex: "22222222-2222-4222-8222-222222222222",
@@ -1178,6 +1373,7 @@ describe("review workflows", () => {
       });
 
       expect(prepared.files).toEqual(["docs/review.md"]);
+      expect(prepared.hasResumedReviewerContext).toBe(true);
       expect(prepared.agentResumeSessions).toEqual({
         gemini: "33333333-3333-4333-8333-333333333333",
       });

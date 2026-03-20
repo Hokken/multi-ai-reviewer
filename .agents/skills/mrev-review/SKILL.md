@@ -59,7 +59,7 @@ Name the file using a short kebab-case feature summary:
 If the user supplied a feature name in `$ARGUMENTS`, use it for `<feature-name>`.
 If no feature name was provided, infer a reasonable kebab-case name from the work completed in this session.
 
-For `implementation` mode, if the work has moved to a new phase, milestone, or materially different implementation slice, create a new review artifact instead of rewriting the earlier implementation review file. Reusing the older file can leave stale `FIXES APPLIED` and `PRIOR REPORTS` entries behind, which can make a fresh review look like a validation pass when it is really a new first pass for later work.
+For `implementation` mode, if the work has moved to a new phase, milestone, or materially different implementation slice, create a new review artifact instead of rewriting the earlier implementation review file. Reusing the older file can leave stale `FIXES APPLIED` entries and outdated prior-report history behind, which can make a fresh review look like a validation pass when it is really a new first pass for later work.
 
 When creating a later implementation review artifact, preserve the earlier implementation review artifact and point to it from the new file so reviewers can recover the relevant prior phase context. Prefer filenames that make the slice obvious, such as `<feature-name>-phase-2-review.md` or `<feature-name>-step-2-review.md`.
 
@@ -201,9 +201,9 @@ Do not put prior review artifact paths in `PRIOR REPORTS` unless they are actual
 
 ### PRIOR REPORTS
 
-If this is a validation pass, always include a `PRIOR REPORTS` section before `FIXES APPLIED`.
+If this is a validation pass, `PRIOR REPORTS` is optional. Include it only when you want explicit fallback/history in the artifact.
 
-List the most recent generated Multi AI Reviewer report that should remain in reviewer context, using a repo-relative path under `.mrev/reports/`.
+If you include it, list only the most recent generated Multi AI Reviewer report, using a repo-relative path under `.mrev/reports/`.
 
 Example:
 
@@ -220,9 +220,9 @@ If the artifact already contains a `PRIOR REPORTS` section:
 - preserve it
 - replace older `.mrev/reports/...` entries with the single most recent prior-pass report path
 
-If this is not the first pass and the artifact does not yet contain `PRIOR REPORTS`, create the section automatically.
+If this is not the first pass and the artifact does not yet contain `PRIOR REPORTS`, do not create the section automatically unless explicit fallback/history would help the reader.
 
-Treat this as required on later passes, not optional. Reviewers depend on this path to retain context from the immediately previous report.
+Do not treat this as required for machine continuity. mrev now resumes reviewer sessions from saved review-chain state keyed by artifact identity. `PRIOR REPORTS` is fallback/history only.
 
 ## FIXES APPLIED
 
@@ -276,9 +276,9 @@ If a suggestion was declined, record it here with:
 - `Status: not fixed`
 - a short rationale for why it was not applied
 
-If this is not the first pass and there are prior Multi AI Reviewer reports, make sure the `PRIOR REPORTS` section and the `FIXES APPLIED` entries agree with each other.
+If there is a `PRIOR REPORTS` section, make sure it and the `FIXES APPLIED` entries agree with each other.
 
-When updating an existing artifact after a review pass, always preserve or append the `PRIOR REPORTS` section before updating `FIXES APPLIED`.
+When updating an existing artifact after a review pass, preserve any existing `PRIOR REPORTS` section if it is still useful, but do not invent one unless you want explicit fallback/history in the artifact.
 
 ## Writing Guidelines
 

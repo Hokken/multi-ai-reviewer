@@ -122,7 +122,7 @@ Provide a table of relevant files with a short purpose description:
 
 ### PRIOR REPORTS
 
-If this investigation is being updated after a review pass, list the single most recent Multi AI Reviewer report path under `.mrev/reports/`:
+If this investigation is being updated after a review pass, you may optionally list the single most recent Multi AI Reviewer report path under `.mrev/reports/` for fallback/history:
 
 ```md
 ## PRIOR REPORTS
@@ -130,7 +130,7 @@ If this investigation is being updated after a review pass, list the single most
 - .mrev/reports/2026-03-08-first-pass.md
 ```
 
-This section is what `mrev review investigation` uses to preserve reviewer continuity on later validation passes. Replace older `.mrev/reports/...` entries with the newest prior report path instead of accumulating every historical report.
+This section is optional fallback/history. mrev now preserves reviewer continuity by saved review-chain state keyed to the artifact, so `PRIOR REPORTS` is no longer required for machine continuity on later validation passes. If you keep it, replace older `.mrev/reports/...` entries with the newest prior report path instead of accumulating every historical report.
 
 If the artifact already contains a `PRIOR REPORTS` section:
 

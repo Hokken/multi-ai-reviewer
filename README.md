@@ -56,9 +56,9 @@ mrev review docs/reviews/feature-review.md
 4. `mrev review` the plan
 5. Implement from the validated plan
 6. `mrev review` the implementation
-7. Fix issues — the author LLM updates `FIXES APPLIED` and `PRIOR REPORTS` in the artifact — then rerun until clean
+7. Fix issues — the author LLM updates `FIXES APPLIED` in the artifact, and may update `PRIOR REPORTS` for fallback/history if desired — then rerun until clean
 
-First-pass reviews are broad. Later passes focus on validating the fixes you claimed in `FIXES APPLIED` against what the most recent prior report actually found. When the prior pass session log contains reusable Claude, Codex, or Gemini session IDs, mrev resumes those reviewer conversations automatically instead of rebuilding all prior context from scratch.
+First-pass reviews are broad. Later passes focus on validating the fixes you claimed in `FIXES APPLIED`. After pass 1, mrev now resumes saved Claude, Codex, and Gemini reviewer sessions by review-chain identity instead of rebuilding all prior context from scratch, so `PRIOR REPORTS` is no longer required for machine continuity on the happy path.
 
 ## Generating Review Artifacts
 
@@ -74,7 +74,7 @@ These skills are the glue between authoring work and `mrev review`:
 
 1. Use the skill to produce an investigation, plan, or implementation review artifact in the repo's configured docs folder.
 2. Run `mrev review <artifact>` or `mrev review` to send that artifact to the reviewer models.
-3. Apply fixes — the author LLM updates `FIXES APPLIED` and `PRIOR REPORTS` — then rerun `mrev review` for validation passes.
+3. Apply fixes — the author LLM updates `FIXES APPLIED`, and may keep `PRIOR REPORTS` as optional fallback/history — then rerun `mrev review` for validation passes.
 
 ## Common Commands
 
@@ -108,7 +108,9 @@ Each review run saves two files:
 
 The Markdown report is the one you read. The JSON is for tooling and audit.
 
-To chain validation passes, the author LLM adds the previous report path to the artifact under `PRIOR REPORTS`. mrev uses the most recent referenced report to recover prior-review context on the next run: it resumes saved Claude, Codex, and Gemini reviewer sessions when possible, and otherwise falls back to including that report in reviewer context.
+Validation passes now persist reviewer continuity by artifact identity under `.mrev/chains/`. On the next run, mrev resumes saved Claude, Codex, and Gemini reviewer sessions directly from that saved chain state when possible, without needing `PRIOR REPORTS`.
+
+`PRIOR REPORTS` is still supported as optional fallback/history. If present, use only the single most recent `.mrev/reports/...` path. mrev can still use that report when direct session resume is unavailable.
 
 ## Install
 

@@ -1,4 +1,5 @@
 import { writeSessionLog } from "../../audit/logger.js";
+import { writeReviewChainRecord } from "../../audit/review-chains.js";
 import { readFile } from "node:fs/promises";
 
 import { buildPrompt } from "../../agents/prompts.js";
@@ -20,7 +21,12 @@ import { prepareExecutionWorkspace } from "../../execution/workspace.js";
 import { executePipeline } from "../../orchestrator/pipeline/executor.js";
 import { parsePipeline, PipelineParseError } from "../../orchestrator/pipeline/parser.js";
 import { validatePipeline } from "../../orchestrator/pipeline/validator.js";
-import type { AgentId, ParsedPipeline, PriorStepOutput } from "../../types/index.js";
+import type {
+  AgentId,
+  ParsedPipeline,
+  PriorStepOutput,
+  ReviewWorkflowKind,
+} from "../../types/index.js";
 
 export interface RunCommandOptions {
   task?: string;
@@ -42,6 +48,12 @@ export interface RunCommandOptions {
   geminiModel?: string;
   reportOnly?: boolean;
   interactiveProgress?: boolean | undefined;
+  reviewChain?:
+    | {
+      kind: ReviewWorkflowKind;
+      artifactPath: string;
+    }
+    | undefined;
 }
 
 export async function runRunCommand(options: RunCommandOptions): Promise<number> {
@@ -201,6 +213,16 @@ async function runActualPipeline(
       steps: result.steps,
       consensus,
     });
+    if (options.reviewChain) {
+      await writeReviewChainRecord({
+        cwd: process.cwd(),
+        kind: options.reviewChain.kind,
+        artifactPath: options.reviewChain.artifactPath,
+        reportPath: session.reportPath,
+        sessionLogPath: session.path,
+        sessionLog: session.log,
+      });
+    }
 
     const hasHardFailure = result.steps.some((step) => step.status === "failed");
     const hasParseFailure = result.steps.some((step) => step.status === "parse_failed");

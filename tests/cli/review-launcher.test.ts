@@ -140,6 +140,7 @@ describe("interactive review launcher", () => {
         reviewers: ["claude", "codex"],
         validationPass: true,
         hasPriorReportContext: true,
+        hasResumedReviewerContext: false,
         missingReferencedReports: [".mrev/reports/missing.md"],
         modelOverrides: {
           claudeModel: "claude-sonnet-4-6",
@@ -151,7 +152,7 @@ describe("interactive review launcher", () => {
 
     expect(lines).toContain("Workflow: review");
     expect(lines).not.toContain("Author: unknown");
-    expect(lines).toContain("Prior reports: 2 included");
+    expect(lines).toContain("Prior report fallback files: 2 included");
     expect(lines).toContain("Missing prior reports: .mrev/reports/missing.md");
   });
 

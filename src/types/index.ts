@@ -172,6 +172,20 @@ export interface SessionLog {
   finalRecommendation: string;
 }
 
+export type ReviewWorkflowKind = "investigation" | "plan" | "implementation";
+
+export interface ReviewChainRecord {
+  version: 1;
+  reviewKey: string;
+  kind: ReviewWorkflowKind;
+  artifactPath: string;
+  createdAt: string;
+  updatedAt: string;
+  latestReportPath?: string | undefined;
+  latestSessionLogPath?: string | undefined;
+  providerSessions: Partial<Record<AgentId, string>>;
+}
+
 export interface ValidationWarning {
   code: string;
   message: string;

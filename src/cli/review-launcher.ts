@@ -481,7 +481,7 @@ export function buildReviewLauncherConfirmationLines(input: {
 
   if (input.preparedWorkflow.validationPass) {
     const priorReportCount = countPriorReportContextFiles(input.preparedWorkflow);
-    lines.push(`Prior reports: ${priorReportCount} included`);
+    lines.push(`Prior report fallback files: ${priorReportCount} included`);
     const resumedAgents = Object.keys(input.preparedWorkflow.agentResumeSessions);
     if (resumedAgents.length > 0) {
       lines.push(`Resumed reviewer sessions: ${resumedAgents.join(", ")}`);
