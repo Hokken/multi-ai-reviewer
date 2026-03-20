@@ -83,3 +83,53 @@ export const OUTPUT_CONTRACTS: Record<RoleId, string> = {
   summarise: JSON.stringify(summaryOutputSchema.toJSONSchema(), null, 2),
 };
 
+export const PROMPT_OUTPUT_CONTRACTS: Record<RoleId, string> = {
+  architect: [
+    "Return one JSON object with keys:",
+    "- rationale: string",
+    "- proposed_approach: string",
+    "- confidence: number 0..1",
+    "- concerns: string[]",
+    "- suggested_tests: string[]",
+    "No markdown fences. No extra text.",
+  ].join("\n"),
+  execute: [
+    "Return one JSON object with keys:",
+    "- unified_diff: string",
+    "- files_affected: string[]",
+    "- shell_commands: string[]",
+    "- edge_cases: string[]",
+    "- confidence: number 0..1",
+    "No markdown fences. No extra text.",
+  ].join("\n"),
+  review: [
+    "Return one JSON object with keys:",
+    "- verdict: \"approve\" | \"revise\" | \"reject\"",
+    "- severity: \"low\" | \"medium\" | \"high\" | \"critical\"",
+    "- issues: { file: string|null, line: number|null, description: string, severity: \"low\"|\"medium\"|\"high\"|\"critical\", suggestion: string }[]",
+    "- security_flags: string[]",
+    "- cross_file_concerns: string[]",
+    "- agrees_with_prior_reviews: boolean|null",
+    "- prior_review_disagreements: string[]",
+    "- suggested_revision: string|null",
+    "Use empty arrays when there are no findings. No markdown fences. No extra text.",
+  ].join("\n"),
+  revise: [
+    "Return one JSON object with keys:",
+    "- revised_unified_diff: string",
+    "- rationale: string",
+    "- addressed_issues: string[]",
+    "- unresolved: string[]",
+    "- confidence: number 0..1",
+    "No markdown fences. No extra text.",
+  ].join("\n"),
+  summarise: [
+    "Return one JSON object with keys:",
+    "- decision: string",
+    "- key_issues_found: string[]",
+    "- changes_proposed: string[]",
+    "- open_questions: string[]",
+    "- recommendation: string",
+    "No markdown fences. No extra text.",
+  ].join("\n"),
+};

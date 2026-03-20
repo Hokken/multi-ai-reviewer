@@ -1,4 +1,4 @@
-import { OUTPUT_CONTRACTS } from "../roles/index.js";
+import { PROMPT_OUTPUT_CONTRACTS } from "../roles/index.js";
 import type {
   CodeContext,
   PipelineStep,
@@ -20,7 +20,7 @@ export function buildPrompt(input: BuildPromptInput): string {
     renderSection("TASK", input.task),
     renderSection("CONTEXT", renderContext(input.context)),
     renderSection("PRIOR OUTPUTS", renderPriorOutputs(input.priorOutputs)),
-    renderSection("OUTPUT CONTRACT", OUTPUT_CONTRACTS[input.step.role]),
+    renderSection("OUTPUT CONTRACT", PROMPT_OUTPUT_CONTRACTS[input.step.role]),
   ];
 
   return sections.join("\n\n");

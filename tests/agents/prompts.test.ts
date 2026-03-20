@@ -41,6 +41,20 @@ describe("buildPrompt", () => {
     expect(prompt.indexOf("=== TASK ===")).toBeLessThan(prompt.indexOf("=== CONTEXT ==="));
   });
 
+  it("uses a compact output contract in prompts", () => {
+    const prompt = buildPrompt({
+      step,
+      task: "Review the unified diff for correctness.",
+      context,
+      priorOutputs: [],
+      systemPrompt: SYSTEM_PROMPTS.review,
+    });
+
+    expect(prompt).toContain('verdict: "approve" | "revise" | "reject"');
+    expect(prompt).not.toContain('"$schema"');
+    expect(prompt).not.toContain('"additionalProperties"');
+  });
+
   it("renders prior outputs when available", () => {
     const priorOutputs: PriorStepOutput[] = [
       {
