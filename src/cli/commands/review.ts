@@ -9,11 +9,6 @@ import { loadRepoProjectConfig } from "../../config/project.js";
 import { ensureWorkspace, getReportPathPattern, getReportPathScanner } from "../../config/storage.js";
 
 const ALL_AGENTS: AgentId[] = ["claude", "codex", "gemini"];
-const REPO_INSTRUCTION_FILE_CANDIDATES: Record<AgentId, readonly string[]> = {
-  claude: ["CLAUDE.md", "AGENTS.md"],
-  codex: ["AGENTS.md"],
-  gemini: ["GEMINI.md", "AGENTS.md"],
-} as const;
 const PLAN_REVIEW_SIGNALS = [
   "implementation plan",
   "test matrix",
@@ -991,19 +986,11 @@ function trimOrUndefined(value?: string | undefined): string | undefined {
 }
 
 export async function resolveReviewAgentFiles(
-  cwd: string,
+  _cwd: string,
   reviewers: AgentId[],
 ): Promise<Partial<Record<AgentId, string[]>>> {
-  const resolved: Partial<Record<AgentId, string[]>> = {};
-
-  for (const reviewer of Array.from(new Set(reviewers))) {
-    const instructionFile = await findRepoInstructionFileForAgent(cwd, reviewer);
-    if (instructionFile) {
-      resolved[reviewer] = [instructionFile];
-    }
-  }
-
-  return resolved;
+  void reviewers;
+  return {};
 }
 
 function mergeAgentFiles(
@@ -1047,23 +1034,6 @@ function buildValidationAgentFiles(
 
 function supportsResumedReviewSessions(agent: AgentId): boolean {
   return agent === "claude" || agent === "codex" || agent === "gemini";
-}
-
-async function findRepoInstructionFileForAgent(
-  cwd: string,
-  agent: AgentId,
-): Promise<string | undefined> {
-  for (const fileName of REPO_INSTRUCTION_FILE_CANDIDATES[agent]) {
-    const absolutePath = resolve(cwd, fileName);
-    try {
-      await access(absolutePath, fsConstants.F_OK);
-      return fileName;
-    } catch {
-      continue;
-    }
-  }
-
-  return undefined;
 }
 
 async function resolveReferencedValidationReports(

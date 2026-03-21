@@ -420,7 +420,7 @@ describe("review workflows", () => {
     }
   });
 
-  it("assigns provider-specific repo instruction files to each reviewer", async () => {
+  it("does not auto-attach provider-specific repo instruction files to reviewers", async () => {
     const cwd = await mkdtemp(join(tmpdir(), "conductor-review-"));
 
     try {
@@ -430,11 +430,7 @@ describe("review workflows", () => {
 
       const files = await resolveReviewAgentFiles(cwd, ["claude", "codex", "gemini"]);
 
-      expect(files).toEqual({
-        claude: ["CLAUDE.md"],
-        codex: ["AGENTS.md"],
-        gemini: ["GEMINI.md"],
-      });
+      expect(files).toEqual({});
     } finally {
       await rm(cwd, { recursive: true, force: true });
     }
@@ -468,10 +464,7 @@ describe("review workflows", () => {
       expect(prepared).toMatchObject({
         kind: "plan",
         pipeline: "review:codex | review:gemini",
-        agentFiles: {
-          codex: ["AGENTS.md"],
-          gemini: ["AGENTS.md"],
-        },
+        agentFiles: {},
         reviewers: ["codex", "gemini"],
         validationPass: false,
         hasPriorReportContext: false,
@@ -515,10 +508,7 @@ describe("review workflows", () => {
       expect(prepared).toMatchObject({
         kind: "investigation",
         pipeline: "review:codex | review:gemini",
-        agentFiles: {
-          codex: ["AGENTS.md"],
-          gemini: ["AGENTS.md"],
-        },
+        agentFiles: {},
         reviewers: ["codex", "gemini"],
         validationPass: false,
         hasPriorReportContext: false,
@@ -561,9 +551,7 @@ describe("review workflows", () => {
       });
 
       expect(prepared.validationPass).toBe(false);
-      expect(prepared.agentFiles).toEqual({
-        codex: ["AGENTS.md"],
-      });
+      expect(prepared.agentFiles).toEqual({});
       expect(prepared.task).toContain('Review the investigation in "docs-investigation.md".');
       expect(prepared.task).not.toContain("Validate the applied fixes in the investigation");
     } finally {
@@ -674,7 +662,7 @@ describe("review workflows", () => {
     }
   });
 
-  it("dedupes explicit files against auto-included repo instructions", async () => {
+  it("keeps explicit files unchanged when repo instruction files are present", async () => {
     const cwd = await mkdtemp(join(tmpdir(), "conductor-review-"));
 
     try {

@@ -224,24 +224,27 @@ function buildAuthorFollowUp(
 ): string {
   if (kind === "investigation") {
     return (
-      "After addressing reviewer suggestions, update the `FIXES APPLIED` " +
-      "section and add the relative path of this report to the `PRIOR REPORTS` " +
-      "section in the original investigation file before running the next validation pass."
+      "After addressing reviewer suggestions, record each applied fix in the `FIXES APPLIED` " +
+      "section of the original investigation file before running the next validation pass. " +
+      "Do not skip this step: later validation passes start from `FIXES APPLIED`. " +
+      "You may also add the relative path of this report to `PRIOR REPORTS` as optional fallback/history."
     );
   }
 
   if (kind === "plan") {
     return (
-      "After addressing reviewer suggestions, update the `FIXES APPLIED` " +
-      "section and add the relative path of this report to the `PRIOR REPORTS` " +
-      "section in the original plan file before running the next validation pass."
+      "After addressing reviewer suggestions, record each applied fix in the `FIXES APPLIED` " +
+      "section of the original plan file before running the next validation pass. " +
+      "Do not skip this step: later validation passes start from `FIXES APPLIED`. " +
+      "You may also add the relative path of this report to `PRIOR REPORTS` as optional fallback/history."
     );
   }
 
   return (
-    "After addressing reviewer suggestions, update the `FIXES APPLIED` " +
-    "section and add the relative path of this report to the `PRIOR REPORTS` " +
-    "section in the original review instructions file before running the next validation pass."
+    "After addressing reviewer suggestions, record each applied fix in the `FIXES APPLIED` " +
+    "section of the original review instructions file before running the next validation pass. " +
+    "Do not skip this step: later validation passes start from `FIXES APPLIED`. " +
+    "You may also add the relative path of this report to `PRIOR REPORTS` as optional fallback/history."
   );
 }
 
