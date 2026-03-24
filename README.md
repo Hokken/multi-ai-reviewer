@@ -30,7 +30,7 @@ If you are developing inside this repository, you can also invoke the built CLI 
 mrev review
 ```
 
-On first run, mrev auto-creates `.mrev/` in the current repo with `config.yaml`, `reports/`, and `sessions/`. This works best when the config has folder paths configured (see [Repo Config](#repo-config)).
+On first run, mrev auto-creates `.mrev/` in the current repo with `config.yaml`, `reports/`, `sessions/`, and `chains/`. This works best when the config has folder paths configured (see [Repo Config](#repo-config)).
 
 **Direct mode** (you already have a review artifact):
 
@@ -58,7 +58,7 @@ mrev review docs/reviews/feature-review.md
 6. `mrev review` the implementation
 7. Fix issues — the author LLM updates `FIXES APPLIED` in the artifact, and may update `PRIOR REPORTS` for fallback/history if desired — then rerun until clean
 
-First-pass reviews are broad. Later passes focus on validating the fixes you claimed in `FIXES APPLIED`. After pass 1, mrev now resumes saved Claude, Codex, and Gemini reviewer sessions by review-chain identity instead of rebuilding all prior context from scratch, so `PRIOR REPORTS` is no longer required for machine continuity on the happy path.
+First-pass reviews are broad. Later passes focus on validating the fixes you claimed in `FIXES APPLIED`. After pass 1, mrev persists the Claude, Codex, and Gemini provider session IDs for that artifact under `.mrev/chains/` and resumes those reviewer sessions on later passes when possible, instead of rebuilding all prior context from scratch. `PRIOR REPORTS` is no longer required for machine continuity on the happy path.
 
 ## Generating Review Artifacts
 
@@ -99,16 +99,17 @@ mrev validate
 
 ## Outputs
 
-Each review run saves two files:
+Each review run saves a session log and report, and review workflows also update chain state used for later validation passes:
 
 | What | Where |
 |------|-------|
 | JSON session log | `.mrev/sessions/` |
 | Markdown report | `.mrev/reports/` |
+| Review chain state (latest report/log paths plus per-provider session IDs) | `.mrev/chains/` |
 
-The Markdown report is the one you read. The JSON is for tooling and audit.
+The Markdown report is the one you read. The JSON files are for tooling, audit, and reviewer session continuity.
 
-Validation passes now persist reviewer continuity by artifact identity under `.mrev/chains/`. On the next run, mrev resumes saved Claude, Codex, and Gemini reviewer sessions directly from that saved chain state when possible, without needing `PRIOR REPORTS`.
+Validation passes persist reviewer continuity by artifact identity under `.mrev/chains/`. On the next run, mrev loads the saved provider session IDs from that chain record and resumes Claude, Codex, and Gemini directly from those saved sessions when possible, without needing `PRIOR REPORTS`.
 
 `PRIOR REPORTS` is still supported as optional fallback/history. If present, use only the single most recent `.mrev/reports/...` path. mrev can still use that report when direct session resume is unavailable.
 
@@ -137,7 +138,7 @@ See [Install In Another Repo](#install-in-another-repo) for other methods (local
 
 ## Repo Config
 
-mrev reads `.mrev/config.yaml` from the current repo. On the first `mrev review` run, the `.mrev/` workspace is auto-created with a starter config, `reports/`, and `sessions/` folders. Subsequent runs never overwrite an existing config.
+mrev reads `.mrev/config.yaml` from the current repo. On the first `mrev review` run, the `.mrev/` workspace is auto-created with a starter config plus `reports/`, `sessions/`, and `chains/` folders. Subsequent runs never overwrite an existing config.
 
 The config has three sections — all optional.
 
