@@ -901,7 +901,7 @@ export function detectAuthoringAgent(content: string): AgentId | undefined {
   for (const pattern of patterns) {
     const match = content.match(pattern);
     if (match?.[1]) {
-      return parseAgentId(match[1]);
+      return parseAgentId(match[1].toLowerCase());
     }
   }
 
