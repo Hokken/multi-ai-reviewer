@@ -87,4 +87,3 @@ function parseStep(rawStep: string): PipelineStep {
     raw: rawStep,
   };
 }
-

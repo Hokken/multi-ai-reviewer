@@ -390,6 +390,17 @@ describe("review workflows", () => {
     expect(author).toBe("gemini");
   });
 
+  it("detects mixed-case authoring agent from content", () => {
+    const author = detectAuthoringAgent(
+      [
+        "Mode: plan",
+        "Author: Claude",
+      ].join("\n"),
+    );
+
+    expect(author).toBe("claude");
+  });
+
   it("detects referenced prior review reports from review instructions content", () => {
     const reports = detectReferencedReviewReports(
       [
