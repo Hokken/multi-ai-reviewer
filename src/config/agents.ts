@@ -53,8 +53,8 @@ export const AGENT_BINARIES: Record<AgentId, string> = {
 };
 
 export const DEFAULT_AGENT_MODELS: Required<AgentModelConfig> = {
-  claude: "claude-opus-4-6",
-  codex: "gpt-5.4",
+  claude: "claude-opus-4-7",
+  codex: "gpt-5.5",
   gemini: "gemini-3.1-pro",
 };
 

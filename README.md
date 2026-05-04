@@ -35,7 +35,7 @@ On first run, mrev auto-creates `.mrev/` in the current repo with `config.yaml`,
 **Direct mode** (you already have a review artifact):
 
 ```bash
-mrev review docs/reviews/feature-review.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
+mrev review docs/reviews/feature-review.md --reviewer-models claude=claude-opus-4-7 codex=gpt-5.5
 ```
 
 mrev reads the artifact, auto-detects whether it is an investigation, plan, or implementation, sends it to the reviewer models, and saves the report.
@@ -83,15 +83,15 @@ These skills are the glue between authoring work and `mrev review`:
 mrev review
 
 # Review a specific file (auto-detects type)
-mrev review artifact.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
+mrev review artifact.md --reviewer-models claude=claude-opus-4-7 codex=gpt-5.5
 
 # Force the review type with a subcommand
-mrev review investigation docs/investigations/ambient-weather.md --reviewer-models claude=claude-sonnet-4-6 gemini=gemini-3-flash-preview
-mrev review plan docs/plans/feature-plan.md --reviewer-models codex=gpt-5.2-codex gemini=gemini-3.1-pro-preview
-mrev review implementation docs/reviews/feature-review.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
+mrev review investigation docs/investigations/ambient-weather.md --reviewer-models claude=claude-opus-4-7 gemini=gemini-3.1-pro
+mrev review plan docs/plans/feature-plan.md --reviewer-models codex=gpt-5.5 gemini=gemini-3.1-pro
+mrev review implementation docs/reviews/feature-review.md --reviewer-models claude=claude-opus-4-7 codex=gpt-5.5
 
 # Add extra instructions to steer reviewers
-mrev review artifact.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex --instructions "Focus on error handling."
+mrev review artifact.md --reviewer-models claude=claude-opus-4-7 codex=gpt-5.5 --instructions "Focus on error handling."
 
 # Check that CLIs are installed and meet minimum versions
 mrev validate
@@ -131,7 +131,7 @@ Then use it from any repo:
 ```bash
 cd /path/to/other-repo
 mrev validate
-mrev review artifact.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
+mrev review artifact.md --reviewer-models claude=claude-opus-4-7 codex=gpt-5.5
 ```
 
 See [Install In Another Repo](#install-in-another-repo) for other methods (local dependency, tarball).
@@ -168,9 +168,9 @@ Default models for each reviewer agent. When set, you can run `mrev review <file
 
 ```yaml
 agent_models:
-  claude: claude-sonnet-4-6
-  codex: gpt-5.2-codex
-  gemini: gemini-3-flash-preview
+  claude: claude-opus-4-7
+  codex: gpt-5.5
+  gemini: gemini-3.1-pro
 ```
 
 CLI flags (`--reviewer-models`, `--claude-model`, etc.) always override these values.
@@ -211,7 +211,7 @@ For direct CLI review runs, reviewer models must be provided via `--reviewer-mod
 | Flag | Description |
 |------|-------------|
 | `--reviewers <agents...>` | Which agents review (e.g. `claude codex`). If omitted, reviewers are inferred from `--reviewer-models` or `agent_models` in config. |
-| `--reviewer-models <entries...>` | Per-reviewer model overrides, e.g. `claude=claude-sonnet-4-6`. |
+| `--reviewer-models <entries...>` | Per-reviewer model overrides, e.g. `claude=claude-opus-4-7`. |
 | `--instructions <text>` | Extra instructions appended to the reviewer task. |
 | `--mode <kind>` | Force review mode without using a subcommand. |
 | `--files <paths...>` | Extra files to include as context. |
@@ -350,7 +350,7 @@ npm install && npm run build && npm link
 # From any other repo:
 cd /path/to/other-repo
 mrev validate
-mrev review artifact.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
+mrev review artifact.md --reviewer-models claude=claude-opus-4-7 codex=gpt-5.5
 ```
 
 ### Local dependency

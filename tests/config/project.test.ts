@@ -47,8 +47,8 @@ describe("project config", () => {
           },
         },
         agent_models: {
-          claude: "claude-opus-4-6",
-          codex: "gpt-5.4",
+          claude: "claude-opus-4-7",
+          codex: "gpt-5.5",
           gemini: "gemini-3-pro-preview",
         },
         prompts: {
@@ -59,8 +59,8 @@ describe("project config", () => {
       const config = await loadProjectConfig(cwd);
       expect(config.default_pipeline).toBe("execute:codex");
       expect(config.presets.quick?.description).toBe("Fast path");
-      expect(config.agent_models.claude).toBe("claude-opus-4-6");
-      expect(config.agent_models.codex).toBe("gpt-5.4");
+      expect(config.agent_models.claude).toBe("claude-opus-4-7");
+      expect(config.agent_models.codex).toBe("gpt-5.5");
       expect(config.agent_models.gemini).toBe("gemini-3-pro-preview");
       expect(config.prompts.review).toBe("Be strict.");
     } finally {
@@ -96,24 +96,24 @@ describe("project config", () => {
     const config = {
       presets: {},
       agent_models: {
-        claude: "claude-opus-4-6",
-        codex: "gpt-5.4",
+        claude: "claude-opus-4-7",
+        codex: "gpt-5.5",
       },
       prompts: {},
     };
 
     expect(resolveAgentModels(config)).toEqual({
-      claude: "claude-opus-4-6",
-      codex: "gpt-5.4",
+      claude: "claude-opus-4-7",
+      codex: "gpt-5.5",
       gemini: "gemini-3.1-pro",
     });
 
     expect(resolveAgentModels(config, {
-      codex: "gpt-5.4",
+      codex: "gpt-5.5",
       gemini: "gemini-3.1-pro",
     })).toEqual({
-      claude: "claude-opus-4-6",
-      codex: "gpt-5.4",
+      claude: "claude-opus-4-7",
+      codex: "gpt-5.5",
       gemini: "gemini-3.1-pro",
     });
   });
@@ -248,4 +248,3 @@ function restoreConfigEnv(
 
   process.env.AI_CONDUCTOR_CONFIG = legacyValue;
 }
-

@@ -72,8 +72,8 @@ describe("interactive review launcher", () => {
       file: "docs/reviews/auth-review.md",
       reviewers: ["codex", "gemini"],
       reviewerModels: {
-        codex: "gpt-5.4",
-        gemini: "gemini-3-flash-preview",
+        codex: "gpt-5.5",
+        gemini: "gemini-3.1-pro",
       },
       options: {
         dryRun: true,
@@ -82,7 +82,7 @@ describe("interactive review launcher", () => {
     });
 
     expect(command).toBe(
-      'mrev review docs/reviews/auth-review.md --reviewers codex gemini --reviewer-models codex=gpt-5.4 gemini=gemini-3-flash-preview --instructions "Focus on regressions." --dry-run',
+      'mrev review docs/reviews/auth-review.md --reviewers codex gemini --reviewer-models codex=gpt-5.5 gemini=gemini-3.1-pro --instructions "Focus on regressions." --dry-run',
     );
   });
 

@@ -101,9 +101,9 @@ const BASE_CONFIG_YAML = `# Multi AI Reviewer configuration
 # Set agent_models to skip --reviewer-models on every command.
 # Only declare the reviewers you want to use (1, 2, or all 3).
 # agent_models:
-#   claude: claude-sonnet-4-6
-#   codex: gpt-5.2-codex
-#   gemini: gemini-3-flash-preview
+#   claude: claude-opus-4-7
+#   codex: gpt-5.5
+#   gemini: gemini-3.1-pro
 
 # Default values for review command flags.
 # CLI flags always override these values.

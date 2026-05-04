@@ -184,9 +184,9 @@ node ./dist/src/cli/index.js review
 Direct review runs require explicit reviewer models:
 
 ```sh
-node ./dist/src/cli/index.js review plan ./docs/IMPLEMENTATION_PLAN.md --reviewer-models claude=claude-sonnet-4-6 codex=gpt-5.2-codex
-node ./dist/src/cli/index.js review investigation ./docs/investigations/ambient-weather.md --reviewer-models claude=claude-sonnet-4-6 gemini=gemini-3-flash-preview
-node ./dist/src/cli/index.js review implementation ./review-instructions.md --reviewer-models codex=gpt-5.2-codex gemini=gemini-3.1-pro-preview
+node ./dist/src/cli/index.js review plan ./docs/IMPLEMENTATION_PLAN.md --reviewer-models claude=claude-opus-4-7 codex=gpt-5.5
+node ./dist/src/cli/index.js review investigation ./docs/investigations/ambient-weather.md --reviewer-models claude=claude-opus-4-7 gemini=gemini-3.1-pro
+node ./dist/src/cli/index.js review implementation ./review-instructions.md --reviewer-models codex=gpt-5.5 gemini=gemini-3.1-pro
 ```
 
 ## Environment Notes
@@ -198,8 +198,8 @@ node ./dist/src/cli/index.js review implementation ./review-instructions.md --re
 - Review runs write session logs to `.mrev/sessions/` and Markdown reports to `.mrev/reports/` in the reviewed repo.
 - Repo-local `.mrev/config.yaml` is optional. If present, it can configure the review launcher.
 - Default agent models in code are currently:
-  - Claude: `claude-opus-4-6`
-  - Codex: `gpt-5.4`
+  - Claude: `claude-opus-4-7`
+  - Codex: `gpt-5.5`
   - Gemini: `gemini-3.1-pro`
 
 ## Post-V1 Guidance

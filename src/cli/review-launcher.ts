@@ -66,6 +66,10 @@ interface SelectableModel {
 const SELECTABLE_MODELS: SelectableModel[] = [
   {
     provider: "claude",
+    model: "claude-opus-4-7",
+  },
+  {
+    provider: "claude",
     model: "claude-opus-4-6",
   },
   {
@@ -75,6 +79,10 @@ const SELECTABLE_MODELS: SelectableModel[] = [
   {
     provider: "claude",
     model: "claude-haiku-4-5-20251001",
+  },
+  {
+    provider: "codex",
+    model: "gpt-5.5",
   },
   {
     provider: "codex",
@@ -91,6 +99,10 @@ const SELECTABLE_MODELS: SelectableModel[] = [
   {
     provider: "codex",
     model: "gpt-5.1-codex-mini",
+  },
+  {
+    provider: "gemini",
+    model: "gemini-3.1-pro",
   },
   {
     provider: "gemini",

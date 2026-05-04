@@ -121,7 +121,7 @@ async function main(): Promise<void> {
     .option("--reviewers <agents...>", "Optional explicit reviewer agents.")
     .option(
       "--reviewer-models <entries...>",
-      "Optional reviewer model overrides in agent=model form, for example claude=claude-sonnet-4-6.",
+      "Optional reviewer model overrides in agent=model form, for example claude=claude-opus-4-7.",
     )
     .option("--instructions <text>", "Extra reviewer instructions appended to the task.")
     .option("--files <paths...>", "Additional files to include as review context.")
@@ -159,7 +159,7 @@ async function main(): Promise<void> {
         .option("--reviewers <agents...>", "Optional explicit reviewer agents.")
         .option(
           "--reviewer-models <entries...>",
-          "Optional reviewer model overrides in agent=model form, for example claude=claude-sonnet-4-6.",
+          "Optional reviewer model overrides in agent=model form, for example claude=claude-opus-4-7.",
         )
         .option("--instructions <text>", "Extra reviewer instructions appended to the task.")
         .option("--files <paths...>", "Additional files to include as review context.")
@@ -189,7 +189,7 @@ async function main(): Promise<void> {
         .option("--reviewers <agents...>", "Optional explicit reviewer agents.")
         .option(
           "--reviewer-models <entries...>",
-          "Optional reviewer model overrides in agent=model form, for example claude=claude-sonnet-4-6.",
+          "Optional reviewer model overrides in agent=model form, for example claude=claude-opus-4-7.",
         )
         .option("--instructions <text>", "Extra reviewer instructions appended to the task.")
         .option("--files <paths...>", "Additional files to include as review context.")
@@ -219,7 +219,7 @@ async function main(): Promise<void> {
         .option("--reviewers <agents...>", "Optional explicit reviewer agents.")
         .option(
           "--reviewer-models <entries...>",
-          "Optional reviewer model overrides in agent=model form, for example claude=claude-sonnet-4-6.",
+          "Optional reviewer model overrides in agent=model form, for example claude=claude-opus-4-7.",
         )
         .option("--instructions <text>", "Extra reviewer instructions appended to the task.")
         .option("--files <paths...>", "Additional files to include as review context.")

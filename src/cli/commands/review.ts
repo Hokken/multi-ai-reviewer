@@ -943,7 +943,7 @@ function parseReviewerModelEntries(
     const match = /^(claude|codex|gemini)=(.+)$/.exec(entry.trim());
     if (!match?.[1] || !match[2]) {
       throw new Error(
-        `Invalid reviewer model "${entry}". Expected agent=model, for example claude=claude-sonnet-4-6.`,
+        `Invalid reviewer model "${entry}". Expected agent=model, for example claude=claude-opus-4-7.`,
       );
     }
 
